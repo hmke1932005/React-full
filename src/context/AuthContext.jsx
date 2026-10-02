@@ -24,6 +24,10 @@ function userFromClaims(claims) {
   return { id: claims.sub, role: claims.role, full_name: claims.name ?? null, email: claims.email ?? null };
 }
 
+/** Fired by any Settings/Profile page after the signed-in person's name changes. */
+export const PROFILE_EVENT = 'uip:profile-updated';
+export const announceProfile = (patch) => window.dispatchEvent(new CustomEvent(PROFILE_EVENT, { detail: patch || {} }));
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null); // { id, role, full_name, email } | null
   const [status, setStatus] = useState('loading'); // 'loading' | 'authenticated' | 'guest'
@@ -43,6 +47,27 @@ export function AuthProvider({ children }) {
       setStatus('guest');
     }
   }, []);
+
+  /** Merge fresh profile fields into the signed-in user. The name in the
+   *  access token is frozen at login, so after the person edits their name
+   *  the UI must be patched here (and re-synced from the API on load). */
+  const updateUser = useCallback((patch) => {
+    setUser((u) => {
+      if (!u || !patch) return u;
+      const next = { ...u };
+      let changed = false;
+      for (const k of ['full_name', 'email']) {
+        if (patch[k] && patch[k] !== u[k]) { next[k] = patch[k]; changed = true; }
+      }
+      return changed ? next : u;
+    });
+  }, []);
+
+  useEffect(() => {
+    const onProfile = (e) => updateUser(e.detail);
+    window.addEventListener(PROFILE_EVENT, onProfile);
+    return () => window.removeEventListener(PROFILE_EVENT, onProfile);
+  }, [updateUser]);
 
   /** POST /api/v1/auth/login. Returns { requiresTwoFactor, csrfToken } on
    *  success so the caller can route to the 2FA screen with the token it
@@ -99,8 +124,8 @@ export function AuthProvider({ children }) {
   }, []);
 
   const value = useMemo(
-    () => ({ user, status, login, completeTwoFactor, cancelTwoFactor, logout }),
-    [user, status, login, completeTwoFactor, cancelTwoFactor, logout]
+    () => ({ user, status, login, completeTwoFactor, cancelTwoFactor, logout, updateUser }),
+    [user, status, login, completeTwoFactor, cancelTwoFactor, logout, updateUser]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

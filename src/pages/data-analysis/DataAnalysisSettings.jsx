@@ -6,6 +6,7 @@ import SettingsShell from '../../components/settings/SettingsShell';
 import { SavedBadge, NotificationsCard, PasswordCard, TwoFactorCard, AppearanceCard, LanguageCard, EmailToggleCard } from '../settings/shared';
 import { useTheme } from '../../context/ThemeContext';
 import { useTranslations } from '../../context/LanguageContext';
+import { announceProfile } from '../../context/AuthContext';
 import i18nCommon from '../../i18n/common';
 import i18nPage from '../../i18n/data-analysis/settings';
 
@@ -121,6 +122,7 @@ function ProfileCard({ profile }) {
       const json = await api.patch(`${BASE}/profile`, { full_name: fullName, contact_email: email });
       setSaved(true);
       setMessage(json.message || null);
+      announceProfile({ full_name: fullName.trim(), email });
     } catch (err) {
       setError(errorMessage(err));
     } finally {

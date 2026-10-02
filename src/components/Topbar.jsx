@@ -8,6 +8,7 @@ import { getPortalBrand, pick } from '../config/portalBrand';
 import { AVATAR_EVENT, avatarSrc } from './insight/AvatarUploader';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
+import { useAuth } from '../context/AuthContext';
 import { displayName, initials, OPEN_AI_EVENT } from './Sidebar';
 import { usePageMetaValue } from '../context/PageMetaContext';
 
@@ -41,10 +42,15 @@ function timeAgo(dateStr, tx) {
 const pickAvatar = (json) =>
   json?.data?.profile?.avatar_path || json?.data?.user?.avatar_path || json?.data?.avatar_path || null;
 
+// Same endpoint also carries the current name (the JWT's copy is frozen at login).
+const pickName = (json) =>
+  json?.data?.profile?.full_name || json?.data?.user?.full_name || json?.data?.full_name || null;
+
 export default function Topbar({ role, user, onMenuClick, onLogout, collapsed = false, onUnreadChange }) {
   const { theme, toggleTheme } = useTheme();
   const { locale, toggleLocale } = useLanguage();
   const navigate = useNavigate();
+  const { updateUser } = useAuth();
   const prefix = portalPrefix(role);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -65,11 +71,17 @@ export default function Topbar({ role, user, onMenuClick, onLogout, collapsed = 
     if (!brand.avatar) return undefined;
     let cancelled = false;
     api.get(brand.avatar)
-      .then((json) => { if (!cancelled) setAvatar(pickAvatar(json)); })
+      .then((json) => {
+        if (cancelled) return;
+        setAvatar(pickAvatar(json));
+        const name = pickName(json);
+        if (name) updateUser({ full_name: name });
+      })
       .catch(() => {});
     const onChange = (e) => setAvatar(e.detail?.path || null);
     window.addEventListener(AVATAR_EVENT, onChange);
     return () => { cancelled = true; window.removeEventListener(AVATAR_EVENT, onChange); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [brand.avatar]);
 
   useEffect(() => {
