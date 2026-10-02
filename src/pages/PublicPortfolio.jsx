@@ -19,6 +19,69 @@ const ROLE_BADGE = {
   security_officer: { en: 'Security', ar: 'الأمان' },
 };
 
+// Per-role identity: accent colour, icon, badge and the "what this person does on UIP" cards.
+// Keyed by `kind` = owner.profile.kind (doctor / ta / supervisor) or else owner.role.
+const hex2rgb = (h) => { const n = parseInt(h.slice(1), 16); return `${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}`; };
+const KIND = {
+  doctor: {
+    accent: '#0F766E', icon: 'award', badge: { en: 'Doctor', ar: 'دكتور' },
+    tag: { en: 'Faculty member', ar: 'عضو هيئة تدريس' },
+    duties: [
+      { icon: 'note',  en: ['Exams & question banks', 'Builds exams and question banks for the courses they teach.'], ar: ['الامتحانات وبنوك الأسئلة', 'بيجهّز الامتحانات وبنوك الأسئلة للمواد اللي بيدرّسها.'] },
+      { icon: 'check-circle', en: ['Grading & feedback', 'Grades student work and gives feedback.'], ar: ['التصحيح والتغذية الراجعة', 'بيصحّح شغل الطلاب وبيدّيهم ملاحظاته.'] },
+      { icon: 'users', en: ['Student follow-up', 'Follows student progress throughout the term.'], ar: ['متابعة الطلاب', 'بيتابع تقدّم الطلاب على مدار الترم.'] },
+    ],
+  },
+  ta: {
+    accent: '#7C3AED', icon: 'users', badge: { en: 'Teaching Assistant', ar: 'معيد' },
+    tag: { en: 'Teaching staff', ar: 'الهيئة المعاونة' },
+    duties: [
+      { icon: 'flask', en: ['Labs & sections', 'Runs practical sessions and section classes.'], ar: ['المعامل والسكاشن', 'بيدير الجلسات العملية والسكاشن.'] },
+      { icon: 'check-circle', en: ['Grading support', 'Helps grade assignments and exams.'], ar: ['مساعدة في التصحيح', 'بيساعد في تصحيح التكليفات والامتحانات.'] },
+      { icon: 'chat', en: ['Student support', 'First point of contact for student questions.'], ar: ['دعم الطلاب', 'أول نقطة تواصل لأسئلة الطلاب.'] },
+    ],
+  },
+  academic_staff: null, // resolved to doctor / ta from the API; falls back to doctor below
+  supervisor: {
+    accent: '#C2410C', icon: 'briefcase', badge: { en: 'Project Supervisor', ar: 'مشرف مشاريع' },
+    tag: { en: 'Supervision', ar: 'الإشراف' },
+    duties: [
+      { icon: 'eye', en: ['Project review', 'Reviews student projects submitted for supervision.'], ar: ['مراجعة المشاريع', 'بيراجع مشاريع الطلاب المقدّمة للإشراف.'] },
+      { icon: 'check-circle', en: ['Approval & grading', 'Approves and grades assigned projects.'], ar: ['الاعتماد والتقييم', 'بيعتمد المشاريع المسندة له وبيقيّمها.'] },
+      { icon: 'users', en: ['Team mentoring', 'Guides student teams through delivery.'], ar: ['توجيه الفرق', 'بيوجّه فرق الطلاب لحد التسليم.'] },
+    ],
+  },
+  admin: {
+    accent: '#4F46E5', icon: 'settings', badge: { en: 'Platform Administrator', ar: 'مدير المنصة' },
+    tag: { en: 'Administration', ar: 'الإدارة' },
+    duties: [
+      { icon: 'users', en: ['Accounts & access', 'Manages users, roles and access across the platform.'], ar: ['الحسابات والصلاحيات', 'بيدير المستخدمين والأدوار والصلاحيات على المنصة.'] },
+      { icon: 'projects', en: ['Content & projects', 'Oversees projects, featured content and announcements.'], ar: ['المحتوى والمشاريع', 'بيشرف على المشاريع والمحتوى المميز والإعلانات.'] },
+      { icon: 'dashboard', en: ['Platform health', 'Keeps the platform running smoothly for everyone.'], ar: ['سلامة المنصة', 'بيتأكد إن المنصة شغّالة كويس للكل.'] },
+    ],
+  },
+  security_admin: {
+    accent: '#0E7490', icon: 'shield', badge: { en: 'Security', ar: 'الأمان' },
+    tag: { en: 'Information security', ar: 'أمن المعلومات' },
+    duties: [
+      { icon: 'alert-triangle', en: ['Incidents & alerts', 'Monitors and responds to security incidents.'], ar: ['الحوادث والتنبيهات', 'بيراقب الحوادث الأمنية وبيتعامل معاها.'] },
+      { icon: 'lock', en: ['Policies & access', 'Maintains security policies and access controls.'], ar: ['السياسات والوصول', 'بيحافظ على سياسات الأمان وضوابط الوصول.'] },
+      { icon: 'file', en: ['Audit & reports', 'Reviews audit logs and produces security reports.'], ar: ['المراجعة والتقارير', 'بيراجع سجلات التدقيق وبيطلّع تقارير الأمان.'] },
+    ],
+  },
+  data_analyst: {
+    accent: '#B45309', icon: 'bar-chart', badge: { en: 'Data Analyst', ar: 'محلل بيانات' },
+    tag: { en: 'Data & insights', ar: 'البيانات والتحليل' },
+    duties: [
+      { icon: 'trend', en: ['Trends & insights', 'Analyses platform data to surface trends.'], ar: ['الاتجاهات والرؤى', 'بيحلّل بيانات المنصة ويطلّع الاتجاهات.'] },
+      { icon: 'dashboard', en: ['Dashboards', 'Builds dashboards and saved data segments.'], ar: ['لوحات المتابعة', 'بيبني لوحات متابعة وشرائح بيانات محفوظة.'] },
+      { icon: 'download', en: ['Reports & exports', 'Prepares custom reports and data exports.'], ar: ['التقارير والتصدير', 'بيجهّز تقارير مخصصة وتصدير للبيانات.'] },
+    ],
+  },
+};
+KIND.security_officer = KIND.security_admin;
+KIND.data_analysis = KIND.data_analyst;
+
 /**
  * Public portfolio — /p/{uuid}, no login required.
  * Talks to GET /api/v1/public/portfolios/{uuid} (owner.full_name, portfolio.headline/about,
@@ -97,13 +160,24 @@ export default function PublicPortfolio() {
   const fullName = owner.full_name || '';
   const initial = (fullName || '?').trim().charAt(0).toUpperCase();
   const liveCount = featured.filter((p) => p.live_demo_url).length;
-  const roleBadge = ROLE_BADGE[owner.role];
-  // Only students own projects; for every other role the Featured Projects
-  // section/stats would be permanently empty, so they are hidden.
+  const prof = owner.profile || null;
+  const kindKey = prof?.kind || (owner.role === 'academic_staff' ? 'doctor' : owner.role);
+  const kind = KIND[kindKey] || null;
+  const roleBadge = kind ? kind.badge : ROLE_BADGE[owner.role];
+  const pick = (o) => (o ? ((isAr ? o.ar : o.en) || o.en || o.ar || '') : '');
+  const affiliation = prof ? [
+    ['university', 'building', t('University', 'الجامعة'), pick(prof.university)],
+    ['faculty',    'layers',   t('Faculty', 'الكلية'),     pick(prof.faculty)],
+    ['department', 'folder',   t('Department', 'القسم'),   pick(prof.department)],
+    ['rank',       'award',    t('Title', 'المسمى'),       pick(prof.rank)],
+  ].filter((r) => r[3]) : [];
+  // Only students own projects; every other role gets its own role-specific profile instead
+  // of an always-empty "Featured Projects" block (unless they do have featured projects).
   const showProjects = !owner.role || owner.role === 'student' || featured.length > 0;
+  const themeStyle = kind ? { '--pf-accent': kind.accent, '--color-primary': kind.accent, '--color-primary-rgb': hex2rgb(kind.accent) } : undefined;
 
   return (
-    <div className="pf-page">
+    <div className="pf-page" style={themeStyle}>
       <div className="pf-shell">
         <PublicTopbar />
 
@@ -114,7 +188,13 @@ export default function PublicPortfolio() {
             <div className="pf-profile__body">
               <div className="pf-avatar" aria-hidden="true">{initial}</div>
               <h1 className="pf-name">{fullName}</h1>
-              {roleBadge && <p className="pf-headline" style={{ opacity: 0.75, fontWeight: 600 }}>{isAr ? roleBadge.ar : roleBadge.en}</p>}
+              {roleBadge && (
+                <span className="pf-role">
+                  {kind && <Icon name={kind.icon} size={14} />}
+                  {isAr ? roleBadge.ar : roleBadge.en}
+                </span>
+              )}
+              {kind && pick(prof?.university) && <p className="pf-headline">{pick(prof.university)}</p>}
               {portfolio.headline && <p className="pf-headline">{portfolio.headline}</p>}
 
               {showProjects && (
@@ -129,7 +209,7 @@ export default function PublicPortfolio() {
                   <Icon name={copied ? 'check' : 'link'} size={16} />
                   {copied ? t('Link copied', 'تم نسخ الرابط') : t('Copy profile link', 'نسخ رابط البروفايل')}
                 </button>
-                <Link to="/projects" className="pf-btn pf-btn--primary">
+                <Link to="/projects" className={`pf-btn${showProjects ? ' pf-btn--primary' : ''}`}>
                   <Icon name="projects" size={16} />
                   {t('Explore all projects', 'استكشف كل المشاريع')}
                 </Link>
@@ -145,6 +225,42 @@ export default function PublicPortfolio() {
                   <h2 className="pf-section__title"><Icon name="user" size={18} />{t('About', 'نبذة')}</h2>
                 </div>
                 <p className="pf-about">{portfolio.about}</p>
+              </section>
+            )}
+
+            {affiliation.length > 0 && (
+              <section className="pf-card pf-section animate-rise-in">
+                <div className="pf-section__head">
+                  <h2 className="pf-section__title"><Icon name="building" size={18} />{t('Affiliation', 'جهة العمل')}</h2>
+                </div>
+                <dl className="pf-facts">
+                  {affiliation.map(([k, ic, label, val]) => (
+                    <div key={k} className="pf-fact">
+                      <dt><Icon name={ic} size={15} />{label}</dt>
+                      <dd>{val}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </section>
+            )}
+
+            {kind && (
+              <section className="pf-card pf-section animate-rise-in">
+                <div className="pf-section__head">
+                  <h2 className="pf-section__title"><Icon name={kind.icon} size={18} />{t('Role on UIP', 'الدور على المنصة')}</h2>
+                  <span className="pf-count pf-count--text">{isAr ? kind.tag.ar : kind.tag.en}</span>
+                </div>
+                <div className="pf-duties">
+                  {kind.duties.map((d, i) => (
+                    <div key={i} className="pf-duty">
+                      <span className="pf-duty__ic"><Icon name={d.icon} size={18} /></span>
+                      <div>
+                        <strong>{isAr ? d.ar[0] : d.en[0]}</strong>
+                        <p>{isAr ? d.ar[1] : d.en[1]}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </section>
             )}
 
