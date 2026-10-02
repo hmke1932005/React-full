@@ -7,19 +7,13 @@ import SiteFooter from '../components/SiteFooter';
 import PublicTopbar from '../components/PublicTopbar';
 
 /**
- * Port of app/Views/public/portfolio.php — reached at /p/{uuid} with no
- * login required (see PublicPortfolioController / routes/web.php in the
- * legacy app). Talks to GET /api/v1/public/portfolios/{uuid} — the
- * unauthenticated twin of PortfoliosApiController::show() registered
- * specifically for this page (the /api/v1/portfolios/{uuid} route stays
- * behind uip.auth, same as legacy's separate PortfoliosApiController vs
- * PublicPortfolioController split). Same avatar-initial hero, headline/
- * about, and featured-projects grid as the PHP view — same
- * .public-projects-grid / .card-project classes, so this reuses the CSS
- * ProjectsShowcase/ProjectDetail already ship rather than adding new rules.
- * 404 (missing user, or a portfolio that exists but isn't public) is a
- * single "not found" state — the API never distinguishes the two, so
- * neither does this page.
+ * Public portfolio — /p/{uuid}, no login required.
+ * Talks to GET /api/v1/public/portfolios/{uuid} (owner.full_name, portfolio.headline/about,
+ * featured_projects[]). 404 (missing user or non-public portfolio) is one "not found" state.
+ *
+ * Redesigned to match the new UIP portal design language (warm canvas, #2A52D7 primary,
+ * 14px radius cards, Light + Dark). Styles: styles/css/pages/public-portfolio.css (scoped to .pf-page).
+ * No new backend data is needed — everything shown comes from the existing response.
  */
 export default function PublicPortfolio() {
   const { uuid } = useParams();
@@ -29,6 +23,7 @@ export default function PublicPortfolio() {
 
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -40,21 +35,45 @@ export default function PublicPortfolio() {
     return () => { alive = false; };
   }, [uuid]);
 
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch { /* clipboard blocked — silently ignore */ }
+  };
+
+  // ---- Not found ----
   if (error) {
     return (
-      <div className="public-wrap" style={{ textAlign: 'center' }}>
-        <PublicTopbar />
-        <p className="text-h3" style={{ marginBottom: 'var(--space-3)' }}>{t('Portfolio not found.', 'الملف الشخصي غير موجود.')}</p>
-        <Link to="/projects" className="btn btn-primary">{t('Browse projects', 'تصفّح المشاريع')}</Link>
+      <div className="pf-page">
+        <div className="pf-shell">
+          <PublicTopbar />
+          <div className="pf-card pf-state">
+            <Icon name="user" size={34} />
+            <h1>{t('Portfolio not found', 'الملف الشخصي غير موجود')}</h1>
+            <p>{t('This profile does not exist or is not public.', 'الملف ده مش موجود أو مش متاح للعامة.')}</p>
+            <Link to="/projects" className="pf-btn pf-btn--primary">{t('Browse projects', 'تصفّح المشاريع')}</Link>
+          </div>
+        </div>
       </div>
     );
   }
 
+  // ---- Loading ----
   if (!data) {
     return (
-      <div className="public-wrap">
-        <PublicTopbar />
-        <div style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>{t('Loading…', 'جارِ التحميل…')}</div>
+      <div className="pf-page">
+        <div className="pf-shell">
+          <PublicTopbar />
+          <div className="pf-layout" aria-busy="true" aria-label={t('Loading…', 'جارِ التحميل…')}>
+            <div className="pf-skel" style={{ height: 380 }} />
+            <div className="pf-main">
+              <div className="pf-skel" style={{ height: 150 }} />
+              <div className="pf-skel" style={{ height: 300 }} />
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -63,90 +82,118 @@ export default function PublicPortfolio() {
   const portfolio = data.portfolio || {};
   const featured = data.featured_projects || [];
   const fullName = owner.full_name || '';
-  const initial = (fullName || '?').charAt(0).toUpperCase();
+  const initial = (fullName || '?').trim().charAt(0).toUpperCase();
+  const liveCount = featured.filter((p) => p.live_demo_url).length;
 
   return (
-    <div className="public-wrap">
-      <PublicTopbar />
+    <div className="pf-page">
+      <div className="pf-shell">
+        <PublicTopbar />
 
-      <div className="card glass-panel animate-rise-in" style={{ padding: 'var(--space-6)', textAlign: 'center' }}>
-        <div
-          style={{
-            width: 88, height: 88, borderRadius: '50%', background: 'var(--color-primary)', color: 'var(--color-on-primary)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--text-h1)', fontWeight: 800,
-            margin: '0 auto var(--space-4)',
-          }}
-        >
-          {initial}
-        </div>
-        <h1 className="text-h1">{fullName}</h1>
-        {portfolio.headline && (
-          <p className="text-body" style={{ color: 'var(--text-secondary)', marginTop: 'var(--space-2)' }}>{portfolio.headline}</p>
-        )}
-        {portfolio.about && (
-          <p className="text-small" style={{ maxWidth: 640, margin: 'var(--space-4) auto 0', whiteSpace: 'pre-line' }}>{portfolio.about}</p>
-        )}
-      </div>
+        <div className="pf-layout">
+          {/* ---- Profile card ---- */}
+          <aside className="pf-card pf-profile animate-rise-in">
+            <div className="pf-profile__cover" />
+            <div className="pf-profile__body">
+              <div className="pf-avatar" aria-hidden="true">{initial}</div>
+              <h1 className="pf-name">{fullName}</h1>
+              {portfolio.headline && <p className="pf-headline">{portfolio.headline}</p>}
 
-      <h2 className="text-h2" style={{ marginTop: 'var(--space-7)', marginBottom: 'var(--space-2)' }}>
-        {t('Featured Projects', 'المشاريع المميزة')}
-      </h2>
-
-      {featured.length === 0 ? (
-        <div className="card glass-panel" style={{ padding: 'var(--space-6)', textAlign: 'center', color: 'var(--text-secondary)' }}>
-          {t('No featured projects yet.', 'لا توجد مشاريع مميزة بعد.')}
-        </div>
-      ) : (
-        <div className="public-projects-grid">
-          {featured.map((p) => {
-            const title = (isAr ? p.title?.ar : p.title?.en) || p.title?.en || '';
-            const summary = (isAr ? p.summary?.ar : p.summary?.en) || p.summary?.en || '';
-            const category = (isAr ? p.category?.ar : p.category?.en) || '';
-            const tags = Array.isArray(p.tags) ? p.tags : [];
-            const cover = p.cover_image_path || '';
-            const liveUrl = p.live_demo_url || '';
-            return (
-              <div key={p.id} className="card card-project glass-panel">
-                {cover && (
-                  <img
-                    src={`/${cover.replace(/^\//, '')}`}
-                    alt={title}
-                    loading="lazy"
-                    style={{ width: '100%', aspectRatio: '16/9', objectFit: 'cover', borderRadius: 'var(--radius-md)', marginBottom: 'var(--space-3)' }}
-                  />
-                )}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 'var(--space-2)' }}>
-                  <span className="badge badge-success">{t('Published', 'منشور')}</span>
-                  {liveUrl && (
-                    <a href={liveUrl} target="_blank" rel="noopener noreferrer" className="badge badge-primary" style={{ textDecoration: 'none' }}>
-                      <Icon name="globe" size={12} /> {t('Live', 'شغّال')}
-                    </a>
-                  )}
-                </div>
-                <h3 className="text-h3">{title}</h3>
-                <p className="text-small" style={{ flex: 1 }}>{summary}</p>
-                {tags.length > 0 && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 'var(--space-2)' }}>
-                    {tags.map((tag, i) => <span key={i} className="badge badge-neutral">{String(tag)}</span>)}
-                  </div>
-                )}
-                <div className="card-project__meta">
-                  <Icon name="folder" size={14} /> <span>{category}</span>
-                  {liveUrl && (
-                    <a href={liveUrl} target="_blank" rel="noopener noreferrer" style={{ marginInlineStart: 'auto' }}>
-                      <Icon name="link" size={14} /> {t('Visit demo', 'زيارة المشروع')}
-                    </a>
-                  )}
-                </div>
+              <div className="pf-stats">
+                <div className="pf-stat"><strong>{featured.length}</strong><span>{t('Featured projects', 'مشاريع مميزة')}</span></div>
+                <div className="pf-stat"><strong>{liveCount}</strong><span>{t('Live demos', 'عروض شغّالة')}</span></div>
               </div>
-            );
-          })}
-        </div>
-      )}
 
-      <p className="text-caption" style={{ textAlign: 'center', marginTop: 'var(--space-7)', color: 'var(--text-secondary)' }}>
-        {t('Public profile powered by', 'ملف عام تم إنشاؤه عبر')} <Link to="/" style={{ color: 'var(--color-primary)' }}>UIP</Link>
-      </p>
+              <div className="pf-actions">
+                <button type="button" className={`pf-btn${copied ? ' is-done' : ''}`} onClick={copyLink}>
+                  <Icon name={copied ? 'check' : 'link'} size={16} />
+                  {copied ? t('Link copied', 'تم نسخ الرابط') : t('Copy profile link', 'نسخ رابط البروفايل')}
+                </button>
+                <Link to="/projects" className="pf-btn pf-btn--primary">
+                  <Icon name="projects" size={16} />
+                  {t('Explore all projects', 'استكشف كل المشاريع')}
+                </Link>
+              </div>
+            </div>
+          </aside>
+
+          {/* ---- Main column ---- */}
+          <div className="pf-main">
+            {portfolio.about && (
+              <section className="pf-card pf-section animate-rise-in">
+                <div className="pf-section__head">
+                  <h2 className="pf-section__title"><Icon name="user" size={18} />{t('About', 'نبذة')}</h2>
+                </div>
+                <p className="pf-about">{portfolio.about}</p>
+              </section>
+            )}
+
+            <section className="pf-card pf-section animate-rise-in">
+              <div className="pf-section__head">
+                <h2 className="pf-section__title"><Icon name="star" size={18} />{t('Featured Projects', 'المشاريع المميزة')}</h2>
+                {featured.length > 0 && <span className="pf-count">{featured.length}</span>}
+              </div>
+
+              {featured.length === 0 ? (
+                <div className="pf-empty">
+                  <Icon name="folder" size={30} />
+                  <strong>{t('No featured projects yet', 'لا توجد مشاريع مميزة بعد')}</strong>
+                  <p>{t('Featured projects will appear here once they are added.', 'المشاريع المميزة هتظهر هنا أول ما تتضاف.')}</p>
+                </div>
+              ) : (
+                <div className="pf-grid">
+                  {featured.map((p) => {
+                    const title = (isAr ? p.title?.ar : p.title?.en) || p.title?.en || p.title?.ar || '';
+                    const summary = (isAr ? p.summary?.ar : p.summary?.en) || p.summary?.en || p.summary?.ar || '';
+                    const category = (isAr ? p.category?.ar : p.category?.en) || p.category?.en || '';
+                    const tags = Array.isArray(p.tags) ? p.tags : [];
+                    const cover = p.cover_image_path || '';
+                    const liveUrl = p.live_demo_url || '';
+                    return (
+                      <article key={p.id} className="pf-project">
+                        <div className="pf-project__media">
+                          {cover ? (
+                            <img src={`/${cover.replace(/^\//, '')}`} alt={title} loading="lazy" />
+                          ) : (
+                            <div className="pf-project__ph">{(title || '?').charAt(0).toUpperCase()}</div>
+                          )}
+                          {liveUrl && (
+                            <a href={liveUrl} target="_blank" rel="noopener noreferrer" className="pf-project__live">
+                              <i /> {t('Live', 'شغّال')}
+                            </a>
+                          )}
+                        </div>
+                        <div className="pf-project__body">
+                          {category && <span className="pf-project__cat">{category}</span>}
+                          <h3 className="pf-project__title">{title}</h3>
+                          {summary && <p className="pf-project__sum">{summary}</p>}
+                          {tags.length > 0 && (
+                            <div className="pf-tags">
+                              {tags.map((tag, i) => <span key={i} className="pf-tag">{String(tag)}</span>)}
+                            </div>
+                          )}
+                          <div className="pf-project__foot">
+                            <span className="pf-badge-pub"><Icon name="check-circle" size={14} />{t('Published', 'منشور')}</span>
+                            {liveUrl && (
+                              <a href={liveUrl} target="_blank" rel="noopener noreferrer">
+                                {t('Visit demo', 'زيارة المشروع')} <Icon name={isAr ? 'arrow-left' : 'arrow-right'} size={14} />
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+          </div>
+        </div>
+
+        <p className="pf-credit">
+          {t('Public profile powered by', 'ملف عام تم إنشاؤه عبر')} <Link to="/">UIP</Link>
+        </p>
+      </div>
 
       <SiteFooter />
     </div>

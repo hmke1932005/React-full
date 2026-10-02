@@ -36,6 +36,7 @@
 
 @import './css/pages/auth.css';
 @import './css/pages/public.css';
+@import './css/pages/public-portfolio.css';
 @import './css/pages/error-page.css';
 @import './css/responsive.css';
 @import './css/app-shell.css';
