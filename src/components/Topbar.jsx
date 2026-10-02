@@ -169,7 +169,7 @@ export default function Topbar({ role, user, onMenuClick, onLogout, collapsed = 
         {isStudent && (
           <form
             className="topbar__search"
-            onSubmit={(e) => { e.preventDefault(); navigate(`${isAdmin ? '/admin/search' : isFaculty ? '/faculty/students' : '/student/projects'}${searchValue.trim() ? `?q=${encodeURIComponent(searchValue.trim())}` : ''}`); }}
+            onSubmit={(e) => { e.preventDefault(); navigate(`${isAdmin ? '/admin/search' : isFaculty ? `/${prefix}/students` : '/student/projects'}${searchValue.trim() ? `?q=${encodeURIComponent(searchValue.trim())}` : ''}`); }}
           >
             <Icon name="search" size={16} />
             <input type="search" placeholder={searchPlaceholder} aria-label={searchPlaceholder} value={searchValue} onChange={(e) => setSearchValue(e.target.value)} />
@@ -241,7 +241,7 @@ export default function Topbar({ role, user, onMenuClick, onLogout, collapsed = 
           </Link>
         </Dropdown>
 
-        {isFaculty && !isAdmin && <span className="topbar__role-chip">{locale === 'ar' ? 'الكلية' : 'Faculty'}</span>}
+        {isFaculty && !isAdmin && <span className="topbar__role-chip">{pick(brand.roleLabel, locale)}</span>}
         {isAdmin && (
           <button type="button" className="topbar__ask-ai" onClick={() => window.dispatchEvent(new Event(OPEN_AI_EVENT))}>
             <Icon name="sparkles" size={14} /> <span>{locale === 'ar' ? 'اسأل الذكاء' : 'Ask AI'}</span>

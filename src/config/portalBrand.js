@@ -36,12 +36,12 @@ const BRAND = {
   },
   university: {
     sub: t('University Portal', 'بوابة الجامعة'),
-    promo: {
-      text: t('Review pending project approvals and join requests.', 'راجع اعتمادات المشاريع وطلبات الانضمام المعلّقة.'),
-      cta: t('Open approvals', 'افتح الاعتمادات'),
-      to: '/university/approvals',
-    },
-    search: { placeholder: t('Search students, projects, faculties…', 'ابحث عن طلاب، مشاريع، كليات…') },
+    // Same design as the Faculty portal: student-style chrome (page title in
+    // the topbar, user card + theme switch + AI assistant in the sidebar), no promo.
+    shell: 'faculty',
+    roleLabel: t('University', 'الجامعة'),
+    promo: null,
+    search: { placeholder: t('Search anything', 'ابحث عن أي شيء') },
     avatar: '/api/v1/universities/me',
     messages: t('Talk with students, faculties and staff in one place.', 'تواصل مع الطلاب والكليات وأعضاء هيئة التدريس في مكان واحد.'),
     notifications: t('Approvals, join requests and university activity.', 'الاعتمادات وطلبات الانضمام ونشاط الجامعة.'),

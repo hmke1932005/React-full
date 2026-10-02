@@ -54,10 +54,11 @@ const RAW_CONFIGS = {
       { key: 'academic-staff', en: 'Academic Staff', ar: 'أعضاء هيئة التدريس', icon: 'users', route: '/university/academic-staff', built: true },
       { key: 'join-requests', en: 'Join Requests', ar: 'طلبات الانضمام', icon: 'users', route: '/university/join-requests', built: true },
       { key: 'verification', en: 'Verification', ar: 'التحقق', icon: 'shield', route: '/university/verification', built: true },
+    ],
+    // Faculty-style layout: Workspace → Account, then a "More" group.
+    more: [
       { key: 'portfolio', en: 'Portfolio', ar: 'الملف العام', icon: 'award', route: '/university/portfolio', built: true },
       { key: 'reports', en: 'Reports', ar: 'التقارير', icon: 'file', route: '/university/reports', built: true },
-    ],
-    ai: [
       { key: 'analytics', en: 'Analytics', ar: 'التحليلات', icon: 'chart', route: '/university/analytics', built: true },
       { key: 'statistics', en: 'Innovation Statistics', ar: 'إحصاءات الابتكار', icon: 'bar-chart', route: '/university/analytics', built: true },
     ],
@@ -296,7 +297,7 @@ export function getNavConfig(role) {
     const { main, ...rest } = sections;
     return { main, account, ...rest };
   }
-  if (role === 'faculty') {
+  if (role === 'faculty' || role === 'university') {
     const { more, ...rest } = sections;
     return { ...rest, account, ...(more ? { more } : {}) };
   }
