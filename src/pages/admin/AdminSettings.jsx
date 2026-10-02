@@ -395,6 +395,9 @@ function PlatformCard({ maintenanceInitial }) {
 
 function MailCard({ initial }) {
   const t = useTranslations(translations);
+  const [driver, setDriver] = useState(initial.driver || 'smtp');
+  const [brevoKey, setBrevoKey] = useState('');
+  const [hasBrevoKey, setHasBrevoKey] = useState(!!initial.has_brevo_key);
   const [host, setHost] = useState(initial.host || '');
   const [port, setPort] = useState(initial.port ?? 587);
   const [username, setUsername] = useState(initial.username || '');
@@ -417,6 +420,8 @@ function MailCard({ initial }) {
     setSaved(false);
     try {
       const json = await api.patch('/api/v1/admin/settings/mail', {
+        mail_driver: driver,
+        mail_brevo_api_key: brevoKey,
         mail_host: host,
         mail_port: port,
         mail_username: username,
@@ -427,7 +432,9 @@ function MailCard({ initial }) {
         mail_reply_to: replyTo,
       });
       setHasPassword(json.data?.has_password ?? hasPassword);
+      setHasBrevoKey(json.data?.has_brevo_key ?? hasBrevoKey);
       setPassword('');
+      setBrevoKey('');
       setSaved(true);
     } catch (err) {
       setError(errorMessage(err));
@@ -453,12 +460,21 @@ function MailCard({ initial }) {
   return (
     <div className="adm-panel">
       <h2 className="text-h3" style={{ marginBottom: 'var(--space-2)' }}>
-        {t('Mail Settings (SMTP)')} <SavedBadge show={saved} />
+        {t('Mail Settings')} <SavedBadge show={saved} />
       </h2>
       <p className="text-caption" style={{ margin: '0 0 var(--space-4)' }}>
         {t('Used to send welcome, email-verification, password-reset, and scheduled-report emails.')}
       </p>
       <form onSubmit={handleSubmit}>
+        <div className="form-group">
+          <label className="form-label">{t("Mail Provider")}</label>
+          <select className="form-select" value={driver} onChange={(e) => { setDriver(e.target.value); setSaved(false); }}>
+            <option value="smtp">{t("SMTP (Google Gmail or any SMTP server)")}</option>
+            <option value="brevo">{t("Brevo API (works even if the server blocks SMTP)")}</option>
+          </select>
+        </div>
+        {driver === 'smtp' ? (
+          <>
         <div className="grid-2" style={{ gap: 'var(--space-3)' }}>
           <div className="form-group">
             <label className="form-label">SMTP Host</label>
@@ -485,29 +501,49 @@ function MailCard({ initial }) {
             />
           </div>
         </div>
+        <div className="form-group">
+          <label className="form-label">{t("Encryption")}</label>
+          <select className="form-select" value={encryption} onChange={(e) => { setEncryption(e.target.value); setSaved(false); }}>
+            <option value="tls">TLS (STARTTLS — 587)</option>
+            <option value="ssl">SSL (465)</option>
+            <option value="">{t("None")}</option>
+          </select>
+        </div>
+            <p className="text-caption" style={{ margin: '0 0 var(--space-3)' }}>
+              {t('For Gmail use smtp.gmail.com, port 587, and an App Password (not your account password). If sending times out, your hosting provider is probably blocking SMTP — switch to Brevo API.')}
+            </p>
+          </>
+        ) : (
+          <>
+            <div className="form-group">
+              <label className="form-label">{t("Brevo API Key")}</label>
+              <input
+                className="form-input"
+                type="password"
+                autoComplete="off"
+                value={brevoKey}
+                onChange={(e) => { setBrevoKey(e.target.value); setSaved(false); }}
+                placeholder={hasBrevoKey ? t("•••••••• (leave blank to keep)") : "xkeysib-..."}
+              />
+            </div>
+            <p className="text-caption" style={{ margin: '0 0 var(--space-3)' }}>
+              {t('Create the key in Brevo → SMTP & API → API Keys (not the SMTP key), and verify the From Address as a Sender in Brevo.')}
+            </p>
+          </>
+        )}
         <div className="grid-2" style={{ gap: 'var(--space-3)' }}>
-          <div className="form-group">
-            <label className="form-label">{t("Encryption")}</label>
-            <select className="form-select" value={encryption} onChange={(e) => { setEncryption(e.target.value); setSaved(false); }}>
-              <option value="tls">TLS (STARTTLS — 587)</option>
-              <option value="ssl">SSL (465)</option>
-              <option value="">{t("None")}</option>
-            </select>
-          </div>
           <div className="form-group">
             <label className="form-label">{t("From Name")}</label>
             <input className="form-input" type="text" value={fromName} onChange={(e) => { setFromName(e.target.value); setSaved(false); }} placeholder="University Innovation Platform" />
           </div>
-        </div>
-        <div className="grid-2" style={{ gap: 'var(--space-3)' }}>
           <div className="form-group">
             <label className="form-label">{t("From Address")}</label>
             <input className="form-input" type="email" value={fromAddress} onChange={(e) => { setFromAddress(e.target.value); setSaved(false); }} placeholder="no-reply@uip.local" />
           </div>
-          <div className="form-group">
-            <label className="form-label">{t("Reply-To")}</label>
-            <input className="form-input" type="email" value={replyTo} onChange={(e) => { setReplyTo(e.target.value); setSaved(false); }} placeholder="support@uip.local" />
-          </div>
+        </div>
+        <div className="form-group">
+          <label className="form-label">{t("Reply-To")}</label>
+          <input className="form-input" type="email" value={replyTo} onChange={(e) => { setReplyTo(e.target.value); setSaved(false); }} placeholder="support@uip.local" />
         </div>
         {error && <p className="text-caption" style={{ color: 'var(--color-danger)' }}>{error}</p>}
         <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap', marginTop: 'var(--space-2)' }}>
