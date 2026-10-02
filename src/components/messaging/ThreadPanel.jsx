@@ -270,6 +270,7 @@ export default function ThreadPanel({
   onVote,
   typingUsers,
   onOpenInfo,
+  onBack,
   onOpenLightbox,
   onNotifyTyping,
   onForwardMessage,
@@ -444,6 +445,9 @@ export default function ThreadPanel({
     <section className="msg-thread" data-thread-panel>
       <div className="msg-thread__active" data-thread-active>
         <header className="msg-thread__header">
+          <button type="button" className="msg-icon-btn msg-thread__back" onClick={onBack} aria-label="Back to conversations">
+            <Icon name="arrow-left" size={20} />
+          </button>
           <div className="msg-thread__peer" data-action="open-info" onClick={onOpenInfo} style={{ cursor: 'pointer' }}>
             <Avatar name={peerLabel(conversation)} isGroup={conversation.is_group} />
             <div className="msg-thread__peer-meta">

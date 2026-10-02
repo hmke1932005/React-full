@@ -108,6 +108,21 @@ export default function Messages() {
     return () => document.body.classList.remove('msg-page-active');
   }, []);
 
+  // Mobile: while a thread is open the page chrome (title + bottom nav) is
+  // hidden so the thread + composer get the whole screen (see messaging-mobile.css).
+  useEffect(() => {
+    document.body.classList.toggle('msg-thread-open', Boolean(activeId));
+    return () => document.body.classList.remove('msg-thread-open');
+  }, [activeId]);
+
+  const onBack = useCallback(() => {
+    setActiveId(null);
+    setActiveConversation(null);
+    setMessages([]);
+    setReplyTarget(null);
+    setInfoOpen(false);
+  }, []);
+
   const showError = (err) => {
     console.error(err);
     // No toast system ported yet — surface inline via a simple alert-free
@@ -567,6 +582,7 @@ export default function Messages() {
         onVote={onVote}
         typingUsers={typingUsers}
         onOpenInfo={() => setInfoOpen((o) => !o)}
+        onBack={onBack}
         onOpenLightbox={setLightboxSrc}
         onNotifyTyping={onNotifyTyping}
         onForwardMessage={onForwardMessage}
