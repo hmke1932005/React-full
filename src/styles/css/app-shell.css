@@ -9,11 +9,18 @@
 .app-shell__content { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .app-shell__main { flex: 1; min-width: 0; padding: var(--space-6); max-width: var(--content-max-width); width: 100%; margin-inline: auto; }
 
-/* Desktop sidebar spans the full height of the page (not a 100vh sticky panel):
-   it stretches with the content column on every page. The mobile drawer
-   (<= 768px, responsive.css) is unaffected. */
+/* Desktop sidebar: pinned to the viewport and fully visible while the page
+   scrolls. It is exactly one screen tall; if the nav is longer than the screen
+   only the nav list scrolls, so the brand/user card and the footer
+   (theme switch, AI button) are always on screen. Needs html/body NOT to be
+   scroll containers (see overflow-x: clip in base.css) or sticky silently fails.
+   The mobile drawer (<= 768px, responsive.css) is unaffected. */
 @media (min-width: 769px) {
-  .app-shell .sidebar { position: relative; top: auto; height: auto; min-height: 100vh; align-self: stretch; }
+  .app-shell .sidebar {
+    position: sticky; top: 0; align-self: flex-start;
+    height: 100vh; height: 100dvh; max-height: 100dvh; overflow: hidden;
+  }
+  .app-shell .sidebar__nav { min-height: 0; overflow-y: auto; }
 }
 
 .sidebar.is-collapsed { width: var(--sidebar-width-collapsed); }

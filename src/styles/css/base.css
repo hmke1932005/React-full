@@ -15,6 +15,11 @@ body {
   transition: background var(--duration-normal) var(--ease-standard),
               color var(--duration-normal) var(--ease-standard);
 }
+/* `hidden` turns html/body into scroll containers, which breaks position: sticky
+   (the app sidebar). `clip` hides horizontal overflow without doing that. */
+@supports (overflow: clip) {
+  html, body { overflow-x: clip; }
+}
 
 /* Long-content safety net (audit item 24): body/html overflow-x:hidden above
    only stops the *page* from scrolling horizontally — it does nothing for a
