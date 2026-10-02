@@ -167,6 +167,20 @@ const RAW_CONFIGS = {
       { key: 'audit-logs', en: 'Audit Logs', ar: 'سجلات التدقيق', icon: 'lock', route: '/admin/audit-logs', built: true },
       { key: 'reports', en: 'Reports', ar: 'التقارير', icon: 'file', route: '/admin/reports', built: true },
     ],
+    // Security Portal pages, reachable by admin too: the backend already allows
+    // it (config/roles.php portal_prefixes.security includes 'admin', and every
+    // /api/v1/security/* controller accepts security_admin/security_officer/admin).
+    // Keys are prefixed 'sec-' so they never collide with the admin items above
+    // (e.g. 'reports') — BottomNav/PageMeta look items up by key/route.
+    securityPortal: [
+      { key: 'sec-incidents', en: 'Incidents', ar: 'الحوادث', icon: 'shield', route: '/security/incidents', built: true },
+      { key: 'sec-vulnerabilities', en: 'Vulnerabilities', ar: 'الثغرات', icon: 'alert', route: '/security/vulnerabilities', built: true },
+      { key: 'sec-alerts', en: 'Alerts', ar: 'التنبيهات', icon: 'bell', route: '/security/alerts', built: true },
+      { key: 'sec-sessions', en: 'Sessions', ar: 'الجلسات', icon: 'monitor', route: '/security/sessions', built: true },
+      { key: 'sec-logs', en: 'Audit & Security Logs', ar: 'سجلات الأمان', icon: 'note', route: '/security/logs', built: true },
+      { key: 'sec-policies', en: 'Security Policies', ar: 'سياسات الأمان', icon: 'lock', route: '/security/policies', built: true },
+      { key: 'sec-reports', en: 'Security Reports', ar: 'تقارير الأمان', icon: 'file', route: '/security/reports', built: true },
+    ],
     messaging: [
       { key: 'messaging-oversight', en: 'Messaging Oversight', ar: 'إشراف الرسائل', icon: 'eye', route: '/admin/messaging/oversight', built: true },
       { key: 'messaging-analytics', en: 'Messaging Analytics', ar: 'تحليلات الرسائل', icon: 'bar-chart', route: '/admin/messaging/analytics', built: true },
@@ -235,6 +249,7 @@ export const SECTION_TITLES = {
   opportunities: { en: 'Opportunities', ar: 'الفرص' },
   community: { en: 'Community', ar: 'المجتمع' },
   security: { en: 'Security & Audit', ar: 'الأمان والتدقيق' },
+  securityPortal: { en: 'Security Portal', ar: 'بوابة الأمان' },
   messaging: { en: 'Messaging Admin', ar: 'إدارة الرسائل' },
   future: { en: 'Future Features', ar: 'ميزات قادمة' },
   tools: { en: 'More tools', ar: 'أدوات إضافية' },
