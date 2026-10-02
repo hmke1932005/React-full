@@ -163,6 +163,7 @@ const RAW_CONFIGS = {
       { key: 'projects', en: 'Projects & Moderation', ar: 'المشاريع والإشراف', icon: 'projects', route: '/admin/projects', built: true },
       { key: 'system-activity', en: 'System Activity', ar: 'نشاط النظام', icon: 'pulse', route: '/admin/activity', built: true },
       { key: 'featured-projects', en: 'Featured Projects', ar: 'المشاريع المميزة', icon: 'sparkles', route: '/admin/featured-projects', built: true },
+      { key: 'portfolio', en: 'Public Profile', ar: 'الملف العام', icon: 'award', route: '/admin/portfolio', built: true },
     ],
     security: [
       { key: 'security-logs', en: 'Security Logs', ar: 'سجلات الأمان', icon: 'shield', route: '/admin/security-logs', built: true },
