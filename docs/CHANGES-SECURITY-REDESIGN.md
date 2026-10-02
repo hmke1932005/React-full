@@ -8,7 +8,7 @@
 
 ## Shell
 - Sidebar: "UIP Security · Control Center" brand, shield tile logo, user card at the bottom.
-  Nav labels/icons match the design; the dead "Meetings" link is removed for security roles.
+  Nav labels/icons match the design; dead links are removed.
 - Topbar: name + role chip. Fixed the search box sitting in the middle of the bar
   (glass-panel pseudo-elements were acting as flex items).
 

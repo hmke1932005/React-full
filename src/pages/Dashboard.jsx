@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api, ApiError } from '../api/client';
-import MeetingsDashboardWidget from '../components/meetings/MeetingsDashboardWidget';
 
 // Each role's "me" endpoint lives at a different prefix in routes/api.php
 // (/api/v1/universities/me, ...). This is a stand-in
@@ -38,9 +37,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div style={{ marginTop: 'var(--space-5)' }}>
-        <MeetingsDashboardWidget />
-      </div>
 
       <div className="card" style={{ marginTop: 'var(--space-5)' }}>
         {loading && <p>Loading profile…</p>}

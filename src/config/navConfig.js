@@ -11,13 +11,6 @@
  */
 
 const COMMON_ACCOUNT_ITEMS = [
-  // Integrated Meeting & Collaboration Platform — Round 1 (Foundation).
-  // Same "one shared page, route only differs by portal prefix" convention
-  // as messages/notifications/settings below (see MeetingsApiController's
-  // docblock: any registered uip_role can host/join, not gated to one
-  // portal), so it lives here instead of duplicated into every role's
-  // `main` list in RAW_CONFIGS.
-  { key: 'meetings', en: 'Meetings', ar: 'الاجتماعات', icon: 'monitor', built: true },
   { key: 'messages', en: 'Messages', ar: 'الرسائل', icon: 'message', built: true },
   { key: 'notifications', en: 'Notifications', ar: 'الإشعارات', icon: 'bell', built: true },
   { key: 'settings', en: 'Settings', ar: 'الإعدادات', icon: 'settings', built: true },
@@ -179,15 +172,6 @@ const RAW_CONFIGS = {
       { key: 'messaging-settings', en: 'Messaging Settings', ar: 'إعدادات الرسائل', icon: 'settings', route: '/admin/messaging/settings', built: true },
       { key: 'notification-settings', en: 'Notification Settings', ar: 'إعدادات الإشعارات', icon: 'bell', route: '/admin/notifications/settings', built: true },
     ],
-    // Round 10 (Admin & Docs) — بند 39. Own section rather than folded
-    // into `messaging` above: distinct domain (meetings, not messaging),
-    // same "one section per admin-facing feature area" convention as
-    // `messaging`/`data-analysis`. `/admin/meetings` itself (the shared
-    // My Meetings list, Round 1) already lives in COMMON_ACCOUNT_ITEMS —
-    // this is only the admin-only monitoring surface on top of it.
-    meetings: [
-      { key: 'meetings-monitoring', en: 'Meetings Monitoring', ar: 'مراقبة الاجتماعات', icon: 'monitor', route: '/admin/meetings/monitoring', built: true },
-    ],
     ai: [
       { key: 'analytics', en: 'Platform Analytics', ar: 'تحليلات المنصة', icon: 'chart', route: '/admin/analytics', built: true },
       { key: 'statistics', en: 'Innovation Statistics', ar: 'إحصاءات الابتكار', icon: 'bar-chart', route: '/admin/statistics', built: true },
@@ -251,7 +235,6 @@ export const SECTION_TITLES = {
   community: { en: 'Community', ar: 'المجتمع' },
   security: { en: 'Security & Audit', ar: 'الأمان والتدقيق' },
   messaging: { en: 'Messaging Admin', ar: 'إدارة الرسائل' },
-  meetings: { en: 'Meetings Admin', ar: 'إدارة الاجتماعات' },
   future: { en: 'Future Features', ar: 'ميزات قادمة' },
   tools: { en: 'More tools', ar: 'أدوات إضافية' },
   account: { en: 'Account', ar: 'الحساب' },
@@ -286,15 +269,6 @@ const ACCOUNT_ITEM_OVERRIDES = {
   // listed here anymore, same as the Faculty note above.
 };
 
-// Account items a role must never see. The Data Analysis portal has no
-// Meetings section: there are no /data-analysis/meetings routes in App.jsx,
-// so the shared "Meetings" account item is removed for that role.
-const ACCOUNT_ITEM_EXCLUDED = {
-  data_analyst: ['meetings'],
-  // Security portal: no /security/meetings routes exist either (and the design omits it).
-  security_admin: ['meetings'],
-  security_officer: ['meetings'],
-};
 
 /** Portal URL prefix for a role — mirrors uip_portal_prefix() on the backend. */
 export function portalPrefix(role) {
@@ -307,8 +281,7 @@ export function getNavConfig(role) {
   const sections = RAW_CONFIGS[role] || RAW_CONFIGS.student;
   const prefix = portalPrefix(role);
   const overrides = ACCOUNT_ITEM_OVERRIDES[role] || {};
-  const excluded = ACCOUNT_ITEM_EXCLUDED[role] || [];
-  const account = COMMON_ACCOUNT_ITEMS.filter((item) => !excluded.includes(item.key)).map((item) => ({
+  const account = COMMON_ACCOUNT_ITEMS.map((item) => ({
     ...item,
     ...(overrides[item.key] || {}),
     route: `/${prefix}/${item.key}`,

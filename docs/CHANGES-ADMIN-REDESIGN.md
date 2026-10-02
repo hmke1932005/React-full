@@ -14,7 +14,7 @@ Build: `npm install && npm run build`.
 
 Build verified: `npm install && npm run build` passes.
 
-- `src/pages/admin/AdminDashboard.jsx` — new layout: KPI cards, Needs Your Attention (built from real counters only), Users by Role (bars from `/api/v1/admin/roles` users_count), Recent Activity, AI overview, Security Logs link, Universities Awaiting Review table. Meetings widget kept. The design's "Platform Growth" chart is NOT drawn: the API has no time-series data yet (nothing invented).
+- `src/pages/admin/AdminDashboard.jsx` — new layout: KPI cards, Needs Your Attention (built from real counters only), Users by Role (bars from `/api/v1/admin/roles` users_count), Recent Activity, AI overview, Security Logs link, Universities Awaiting Review table. The design's "Platform Growth" chart is NOT drawn: the API has no time-series data yet (nothing invented).
 - `src/pages/admin/AdminUsers.jsx` — "Users & Roles": KPI row from `counts_by_status`, filter bar, avatar + role/status badges, pagination footer, row links to details. `window.confirm()` replaced by in-page "Confirm action" dialog. Reads `?status=` from the URL (used by the dashboard links).
 - `src/pages/admin/AdminUserDetails.jsx` (new) — route `/admin/users/:uuid`: profile card, tabs Overview / Roles & Permissions (read-only matrix from the role's permission groups, union of primary + additional roles) / Activity (audit-log search by the user's email) / Security (suspend/reactivate, block IP, delete). Optional fields (last sign-in, email verified, 2FA) appear only when the API returns them.
 - `src/components/admin/adminUi.jsx` (new) — Avatar, StatusBadge, RoleBadge, ConfirmModal, UserModal (the existing add/edit + secondary-roles dialog, behavior unchanged).
@@ -74,11 +74,10 @@ Build verified: `npm run build` passes. No API or behavior changes; markup/style
 - `AdminProfile.jsx`: profile card + account details panel (same avatar upload endpoint).
 - `admin-portal.css`: `.adm-role-*` styles.
 
-# Batch 8 — Meetings Monitoring + Messaging (Oversight, Conversation, Analytics, Settings)
+# Batch 8 — Messaging (Oversight, Conversation, Analytics, Settings)
 
 Build verified: `npm run build` passes. No API changes; markup/styles plus the dialog swaps below.
 
-- `AdminMeetingsMonitoring.jsx`: KPI cards, Admin panels / tables for duration stats, recordings by status and recent security events.
 - `AdminMessagingOversight.jsx`: Admin filter bar (search + type) and table, pager in the Admin style.
 - `AdminMessagingConversation.jsx`: back link, avatar per message, panel; the two `confirm()` calls (delete message / delete attachment) replaced by the in-page "Confirm action" dialog.
 - `AdminMessagingAnalytics.jsx`: KPI cards, Admin table, back link.

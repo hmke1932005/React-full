@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, errorMessage } from '../../api/client';
 import Icon from '../../components/Icon';
-import MeetingsDashboardWidget from '../../components/meetings/MeetingsDashboardWidget';
 import { useLanguage } from '../../context/LanguageContext';
 import { usePageMeta } from '../../context/PageMetaContext';
 import { Kpi, StatusPill, Stepper, Pill, EmptyState, Skeleton, loc, timeAgo, daysUntil } from '../../components/student/stUi';
@@ -118,7 +117,6 @@ export default function StudentDashboard() {
         </div>
       )}
 
-      <MeetingsDashboardWidget />
 
       <div className="st-grid st-grid--main">
         <div className="st-stack">

@@ -59,7 +59,6 @@ const AdminMessagingOversight = lazy(() => import('./pages/admin/AdminMessagingO
 const AdminMessagingConversation = lazy(() => import('./pages/admin/AdminMessagingConversation'));
 const AdminMessagingAnalytics = lazy(() => import('./pages/admin/AdminMessagingAnalytics'));
 const AdminMessagingSettings = lazy(() => import('./pages/admin/AdminMessagingSettings'));
-const AdminMeetingsMonitoring = lazy(() => import('./pages/admin/AdminMeetingsMonitoring'));
 const AdminAiCodeReview = lazy(() => import('./pages/admin/AdminAiCodeReview'));
 const AdminAiCodeReviewHistory = lazy(() => import('./pages/admin/AdminAiCodeReviewHistory'));
 const AdminAiCodeReviewCompare = lazy(() => import('./pages/admin/AdminAiCodeReviewCompare'));
@@ -174,11 +173,6 @@ const FacultyGraduationReview = lazy(() => import('./pages/faculty/FacultyGradua
 const FacultyGraduationEdit = lazy(() => import('./pages/faculty/FacultyGraduationEdit'));
 const FacultyGraduationCertificate = lazy(() => import('./pages/faculty/FacultyGraduationCertificate'));
 const Messages = lazy(() => import('./pages/Messages'));
-const MyMeetings = lazy(() => import('./pages/meetings/MyMeetings'));
-const MeetingCalendar = lazy(() => import('./pages/meetings/MeetingCalendar'));
-const MeetingDetails = lazy(() => import('./pages/meetings/MeetingDetails'));
-const MeetingPreJoin = lazy(() => import('./pages/meetings/MeetingPreJoin'));
-const MeetingRoom = lazy(() => import('./pages/meetings/MeetingRoom'));
 const Notifications = lazy(() => import('./pages/Notifications'));
 
 export default function App() {
@@ -205,12 +199,6 @@ export default function App() {
             <Route path="/500" element={<ServerError />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/verify-certificate" element={<VerifyCertificate />} />
-            {/* Meetings Pre-Join — Round 2 (Lobby & Access). Public like the
-                rows above (uip.auth.optional on the backend: a guest with
-                no Bearer token still reaches it, and an already-logged-in
-                user's token — if present in sessionStorage — is sent anyway
-                since the api client doesn't gate on route). */}
-            <Route path="/join/:joinToken" element={<MeetingPreJoin />} />
 
             <Route path="/auth/login" element={<Login />} />
             <Route path="/auth/register" element={<Register />} />
@@ -515,50 +503,6 @@ export default function App() {
                     /p/{uuid} (PublicPortfolio.jsx) needs no change. */}
                 <Route path="/academic-staff/portfolio" element={<AcademicStaffPortfolio />} />
 
-                {/* Meetings — Integrated Meeting & Collaboration Platform,
-                    Round 1 (Foundation). One shared page pair (src/pages/
-                    meetings/MyMeetings.jsx + MeetingDetails.jsx) talking to
-                    the one shared /api/v1/meetings/* backend, same "one
-                    system, portal only changes the URL prefix" convention
-                    as Messages/Notifications below. Every portal gets its
-                    own route per navConfig.js's COMMON_ACCOUNT_ITEMS
-                    (`/${role}/meetings`), all pointing at the same
-                    components — do NOT fork this per portal. */}
-                {/* Round 8 (Invitations & Calendar), بند 14 — the literal
-                    "calendar" segment is registered *before* the ":uuid"
-                    route below on every portal, same "specific literal
-                    path before the generic dynamic one" reasoning as
-                    routes/api.php's own `meetings/calendar` vs
-                    `meetings/{uuid}` ordering (see that file's comment). */}
-                <Route path="/student/meetings/calendar" element={<MeetingCalendar />} />
-                <Route path="/student/meetings" element={<MyMeetings />} />
-                <Route path="/student/meetings/:uuid" element={<MeetingDetails />} />
-                <Route path="/university/meetings/calendar" element={<MeetingCalendar />} />
-                <Route path="/university/meetings" element={<MyMeetings />} />
-                <Route path="/university/meetings/:uuid" element={<MeetingDetails />} />
-                <Route path="/faculty/meetings/calendar" element={<MeetingCalendar />} />
-                <Route path="/faculty/meetings" element={<MyMeetings />} />
-                <Route path="/faculty/meetings/:uuid" element={<MeetingDetails />} />
-                <Route path="/admin/meetings/monitoring" element={<AdminMeetingsMonitoring />} />
-                <Route path="/admin/meetings/calendar" element={<MeetingCalendar />} />
-                <Route path="/admin/meetings" element={<MyMeetings />} />
-                <Route path="/admin/meetings/:uuid" element={<MeetingDetails />} />
-                <Route path="/academic-staff/meetings/calendar" element={<MeetingCalendar />} />
-                <Route path="/academic-staff/meetings" element={<MyMeetings />} />
-                <Route path="/academic-staff/meetings/:uuid" element={<MeetingDetails />} />
-                {/* Meeting Room — Round 3-4 (Signaling + WebRTC Core).
-                    Immersive full-screen route (own MeetingRoom.jsx wrapper,
-                    see meeting-room.css's body-class technique), same
-                    per-portal fan-out as the routes above — every portal's
-                    prefix, same MeetingRoom component. Guests never hit
-                    these routes: they get the room rendered inline by
-                    MeetingPreJoin.jsx once admitted (no portal to send a
-                    guest to). */}
-                <Route path="/student/meetings/:uuid/room" element={<MeetingRoom />} />
-                <Route path="/university/meetings/:uuid/room" element={<MeetingRoom />} />
-                <Route path="/faculty/meetings/:uuid/room" element={<MeetingRoom />} />
-                <Route path="/admin/meetings/:uuid/room" element={<MeetingRoom />} />
-                <Route path="/academic-staff/meetings/:uuid/room" element={<MeetingRoom />} />
 
                 {/* Messages — one shared page/component (src/pages/Messages.jsx)
                     talking to the one shared /api/v1/messaging/* backend, same

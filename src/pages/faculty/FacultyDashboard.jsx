@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, errorMessage } from '../../api/client';
 import Icon from '../../components/Icon';
-import MeetingsDashboardWidget from '../../components/meetings/MeetingsDashboardWidget';
 import { useTranslations, useLanguage } from '../../context/LanguageContext';
 import i18nCommon from '../../i18n/common';
 import i18nPage from '../../i18n/faculty/dashboard';
@@ -176,7 +175,6 @@ export default function FacultyDashboard() {
       </div>
 
       <div style={{ marginBottom: 'var(--space-4)' }}>
-        <MeetingsDashboardWidget />
       </div>
 
       {!faculty && (

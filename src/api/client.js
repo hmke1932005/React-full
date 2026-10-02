@@ -21,10 +21,7 @@
  * a University portal session next to a Student portal session) used to
  * make the second login silently overwrite the first tab's token —
  * whichever tab logged in last "won", and the other tab kept sending
- * requests (including the meeting signaling channel auth call) under
- * the wrong identity, which is why two simultaneous meeting sessions in
- * the same browser could get stuck on "Connecting…" forever even though
- * either one alone worked fine. `sessionStorage` is scoped per tab, so
+ * requests under the wrong identity. `sessionStorage` is scoped per tab, so
  * each tab keeps its own independent session.
  */
 

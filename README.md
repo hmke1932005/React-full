@@ -36,8 +36,7 @@ those three places if the API moves.
 
 ## Environment variables
 
-Optional, see `.env.example`. Only the meetings live signaling needs any
-(`VITE_REVERB_*`); everything else works out of the box.
+Optional, see `.env.example`. Everything works out of the box.
 
 ## Structure
 

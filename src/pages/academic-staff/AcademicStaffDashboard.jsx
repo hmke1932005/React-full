@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, errorMessage } from '../../api/client';
 import Icon from '../../components/Icon';
-import MeetingsDashboardWidget from '../../components/meetings/MeetingsDashboardWidget';
 import { StaffHead, StaffKpi, whenLabel } from '../../components/staff/stfUi';
 import { Pill, Skeleton } from '../../components/student/stUi';
 import { useLanguage } from '../../context/LanguageContext';
@@ -108,7 +107,6 @@ export default function AcademicStaffDashboard() {
         <StaffKpi value={pending} label={ar ? 'بانتظار التصحيح' : 'Pending Grading'} icon="edit" tone="bad" />
       </div>
 
-      <MeetingsDashboardWidget />
 
       <div className="st-grid st-grid--main">
         <div className="st-stack">

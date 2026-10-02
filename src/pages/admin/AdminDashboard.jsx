@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { api, errorMessage } from '../../api/client';
 import Icon from '../../components/Icon';
 import { AreaChart } from '../../components/admin/adminUi';
-import MeetingsDashboardWidget from '../../components/meetings/MeetingsDashboardWidget';
 import { useTranslations } from '../../context/LanguageContext';
 import i18nCommon from '../../i18n/common';
 import i18nPage from '../../i18n/admin/dashboard';
@@ -103,7 +102,6 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      <div style={{ marginBottom: 16 }}><MeetingsDashboardWidget /></div>
 
       <div className="adm-kpis">
         <Kpi label="Total Users" value={data.total_users} icon="users" to="/admin/users" />

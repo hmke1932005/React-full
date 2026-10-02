@@ -19,7 +19,7 @@ function decodeJwt(token) {
  *  are the display claims UipJwtService::issueTokenPair() now embeds
  *  alongside `sub`/`role` (both nullable for tokens issued before that
  *  change / a since-deleted user), used anywhere the app needs to show
- *  the signed-in user's name (e.g. Meeting Room's own video tile label). */
+ *  the signed-in user's name. */
 function userFromClaims(claims) {
   return { id: claims.sub, role: claims.role, full_name: claims.name ?? null, email: claims.email ?? null };
 }

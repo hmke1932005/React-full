@@ -103,25 +103,6 @@ const PATHS = {
   collapse: '<path d="M9 3H5a2 2 0 0 0-2 2v4"/><path d="M15 3h4a2 2 0 0 1 2 2v4"/><path d="M9 21H5a2 2 0 0 1-2-2v-4"/><path d="M15 21h4a2 2 0 0 0 2-2v-4"/><path d="M4 4l6 6M20 4l-6 6M4 20l6-6M20 20l-6-6"/>',
   alert: '<path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/>',
   'message-square': '<path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5A8.5 8.5 0 1 1 21 11.5Z"/>',
-  // Below: not in app/Helpers/IconHelper.php (no PHP view ever used them) —
-  // added fresh for Round 5 (Live Collaboration, بند 11 — Raise Hand +
-  // Reactions), same 24x24 stroke-based style as every icon above.
-  hand: '<path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V12"/><path d="M11 11.5V4a1.5 1.5 0 0 1 3 0v8"/><path d="M14 12V5.5a1.5 1.5 0 0 1 3 0V13"/><path d="M17 8.5a1.5 1.5 0 0 1 3 0V15c0 4-3 7-6.5 7h-1C9 22 8 21 6.6 19.4L3.4 15.7a1.5 1.5 0 0 1 2.2-2l2.4 2.1"/>',
-  smile: '<circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01M15 9h.01"/>',
-  // Below: not in app/Helpers/IconHelper.php either — added fresh for
-  // Round 6 (Host Controls, بند 5 — Participants Panel: mute/disable
-  // camera/remove/promote/demote/transfer host/lock meeting), same
-  // 24x24 stroke-based style as every icon above.
-  'mic-off': '<path d="M9 2a3 3 0 0 1 3-.9M15 9.3V5a3 3 0 0 0-4.7-2.5"/><path d="M5 10a7 7 0 0 0 10.3 6.2"/><path d="M19 10a7 7 0 0 1-1.2 3.9"/><path d="M12 19v3"/><path d="M2 2l20 20"/>',
-  'video-off': '<path d="m16 10 5-3v10l-5-3"/><path d="M14 6H4a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2"/><path d="M2 2l20 20"/>',
-  'user-x': '<circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 4-6 8-6 1.5 0 2.9.3 4 .8"/><path d="M17 9l5 5M22 9l-5 5"/>',
-  crown: '<path d="m3 8 4 3 5-6 5 6 4-3-2 11H5L3 8Z"/><path d="M5 19h14"/>',
-  // Below: not in app/Helpers/IconHelper.php either — added fresh for
-  // Round 9 (Recording, بند 18 — recording control/indicator/list),
-  // same 24x24 stroke-based style as every icon above. A plain filled
-  // dot (no outline path of its own beyond the circle) reads as the
-  // universal "record" glyph.
-  'record-dot': '<circle cx="12" cy="12" r="6" fill="currentColor" stroke="none"/>',
 };
 
 export default function Icon({ name, size = 20, className, style }) {
