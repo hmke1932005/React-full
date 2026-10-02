@@ -760,3 +760,31 @@ flex: 1 1 auto;
     background: transparent;
 }
 
+/* --------------------------------------------------------------------------
+   Bugfix: three-column layout (rail + thread + info) squeezed the thread.
+   With the info panel open the grid was rail(340) + 1fr + info(320), so on
+   any viewport under ~1500px (more once the sidebar is open) the thread was
+   left with ~150px and every bubble wrapped one letter per line.
+   Now: the info panel only sits in its own column on wide screens; below
+   that it slides over the thread as a drawer, the rail gets narrower on
+   mid-size screens, and the thread can never collapse below a usable width.
+   -------------------------------------------------------------------------- */
+.msg-thread { min-width: 0; }
+.msg-bubble-col, .msg-bubble { min-width: 0; overflow-wrap: anywhere; }
+
+@media (max-width: 1479px) {
+  html body .msg-app[data-msg-app].has-info { grid-template-columns: var(--msg-rail-w) minmax(0, 1fr); }
+  .msg-app .msg-info {
+    position: absolute; inset-inline-end: 0; top: 0; bottom: 0;
+    width: min(340px, 92%); z-index: var(--z-sticky);
+    box-shadow: var(--glass-shadow); background: var(--bg-surface);
+  }
+}
+
+@media (max-width: 1180px) {
+  html body .msg-app[data-msg-app] { --msg-rail-w: 280px; }
+}
+
+@media (max-width: 900px) {
+  html body .msg-app[data-msg-app] { --msg-rail-w: 240px; }
+}
