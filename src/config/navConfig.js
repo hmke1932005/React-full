@@ -124,6 +124,7 @@ const RAW_CONFIGS = {
       { key: 'dashboard', en: 'Dashboard', ar: 'لوحة التحكم', icon: 'dashboard', route: '/supervisor/dashboard', built: true },
       { key: 'students', en: 'My Students', ar: 'طلابي', icon: 'users', route: '/supervisor/students', built: true },
       { key: 'projects', en: 'My Projects', ar: 'مشاريعي', icon: 'folder', route: '/supervisor/projects', built: true },
+      { key: 'portfolio', en: 'Public Profile', ar: 'الملف العام', icon: 'award', route: '/supervisor/portfolio', built: true },
     ],
   },
   data_analyst: {
@@ -147,6 +148,7 @@ const RAW_CONFIGS = {
       { key: 'da-report-files', en: 'Report Files', ar: 'ملفات التقارير', icon: 'upload', route: '/data-analysis/report-files', built: true },
       { key: 'da-workspace', en: 'Team Workspace', ar: 'مساحة الفريق', icon: 'users', route: '/data-analysis/workspace', built: true },
       { key: 'da-ai-insights', en: 'AI Insights', ar: 'رؤى الذكاء الاصطناعي', icon: 'sparkles', route: '/data-analysis/ai-insights', built: true },
+      { key: 'da-portfolio', en: 'Public Profile', ar: 'الملف العام', icon: 'award', route: '/data-analysis/portfolio', built: true },
     ],
   },
   admin: {
@@ -214,6 +216,7 @@ const RAW_CONFIGS = {
       { key: 'policies', en: 'Security Policies', ar: 'سياسات الأمان', icon: 'lock', route: '/security/policies', built: true },
       { key: 'reports', en: 'Security Reports', ar: 'تقارير الأمان', icon: 'file', route: '/security/reports', built: true },
       { key: 'report-files', en: 'Report Files', ar: 'ملفات التقارير', icon: 'archive', route: '/security/report-files', built: true },
+      { key: 'portfolio', en: 'Public Profile', ar: 'الملف العام', icon: 'award', route: '/security/portfolio', built: true },
     ],
   },
   security_officer: {
@@ -226,6 +229,7 @@ const RAW_CONFIGS = {
       { key: 'logs', en: 'Audit & Security Logs', ar: 'سجلات الأمان', icon: 'note', route: '/security/logs', built: true },
       { key: 'reports', en: 'Security Reports', ar: 'تقارير الأمان', icon: 'file', route: '/security/reports', built: true },
       { key: 'report-files', en: 'Report Files', ar: 'ملفات التقارير', icon: 'archive', route: '/security/report-files', built: true },
+      { key: 'portfolio', en: 'Public Profile', ar: 'الملف العام', icon: 'award', route: '/security/portfolio', built: true },
     ],
   },
 };

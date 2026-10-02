@@ -6,6 +6,19 @@ import Icon from '../components/Icon';
 import SiteFooter from '../components/SiteFooter';
 import PublicTopbar from '../components/PublicTopbar';
 
+// Role badge shown under the name (owner.role comes from the API's primary role).
+const ROLE_BADGE = {
+  student:          { en: 'Student', ar: 'طالب' },
+  university:       { en: 'University', ar: 'جامعة' },
+  faculty:          { en: 'Faculty', ar: 'كلية' },
+  academic_staff:   { en: 'Academic Staff', ar: 'عضو هيئة تدريس' },
+  supervisor:       { en: 'Supervisor', ar: 'مشرف' },
+  admin:            { en: 'Administrator', ar: 'مدير المنصة' },
+  data_analyst:     { en: 'Data Analyst', ar: 'محلل بيانات' },
+  security_admin:   { en: 'Security', ar: 'الأمان' },
+  security_officer: { en: 'Security', ar: 'الأمان' },
+};
+
 /**
  * Public portfolio — /p/{uuid}, no login required.
  * Talks to GET /api/v1/public/portfolios/{uuid} (owner.full_name, portfolio.headline/about,
@@ -84,6 +97,10 @@ export default function PublicPortfolio() {
   const fullName = owner.full_name || '';
   const initial = (fullName || '?').trim().charAt(0).toUpperCase();
   const liveCount = featured.filter((p) => p.live_demo_url).length;
+  const roleBadge = ROLE_BADGE[owner.role];
+  // Only students own projects; for every other role the Featured Projects
+  // section/stats would be permanently empty, so they are hidden.
+  const showProjects = !owner.role || owner.role === 'student' || featured.length > 0;
 
   return (
     <div className="pf-page">
@@ -97,12 +114,15 @@ export default function PublicPortfolio() {
             <div className="pf-profile__body">
               <div className="pf-avatar" aria-hidden="true">{initial}</div>
               <h1 className="pf-name">{fullName}</h1>
+              {roleBadge && <p className="pf-headline" style={{ opacity: 0.75, fontWeight: 600 }}>{isAr ? roleBadge.ar : roleBadge.en}</p>}
               {portfolio.headline && <p className="pf-headline">{portfolio.headline}</p>}
 
-              <div className="pf-stats">
-                <div className="pf-stat"><strong>{featured.length}</strong><span>{t('Featured projects', 'مشاريع مميزة')}</span></div>
-                <div className="pf-stat"><strong>{liveCount}</strong><span>{t('Live demos', 'عروض شغّالة')}</span></div>
-              </div>
+              {showProjects && (
+                <div className="pf-stats">
+                  <div className="pf-stat"><strong>{featured.length}</strong><span>{t('Featured projects', 'مشاريع مميزة')}</span></div>
+                  <div className="pf-stat"><strong>{liveCount}</strong><span>{t('Live demos', 'عروض شغّالة')}</span></div>
+                </div>
+              )}
 
               <div className="pf-actions">
                 <button type="button" className={`pf-btn${copied ? ' is-done' : ''}`} onClick={copyLink}>
@@ -128,6 +148,7 @@ export default function PublicPortfolio() {
               </section>
             )}
 
+            {showProjects && (
             <section className="pf-card pf-section animate-rise-in">
               <div className="pf-section__head">
                 <h2 className="pf-section__title"><Icon name="star" size={18} />{t('Featured Projects', 'المشاريع المميزة')}</h2>
@@ -187,6 +208,7 @@ export default function PublicPortfolio() {
                 </div>
               )}
             </section>
+            )}
           </div>
         </div>
 

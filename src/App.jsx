@@ -169,6 +169,8 @@ const FacultySettings = lazy(() => import('./pages/faculty/FacultySettings'));
 const FacultyGraduation = lazy(() => import('./pages/faculty/FacultyGraduation'));
 const FacultyProfile = lazy(() => import('./pages/faculty/FacultyProfile'));
 const FacultyPortfolio = lazy(() => import('./pages/faculty/FacultyPortfolio'));
+// Shared Public Profile page for portals that had no share link (supervisor, admin, data analyst, security).
+const PublicProfileEditor = lazy(() => import('./pages/PublicProfileEditor'));
 const FacultyGraduationReview = lazy(() => import('./pages/faculty/FacultyGraduationReview'));
 const FacultyGraduationEdit = lazy(() => import('./pages/faculty/FacultyGraduationEdit'));
 const FacultyGraduationCertificate = lazy(() => import('./pages/faculty/FacultyGraduationCertificate'));
@@ -308,6 +310,7 @@ export default function App() {
                 <Route path="/data-analysis/kpis" element={<DataAnalysisKpis />} />
                 <Route path="/data-analysis/exports" element={<DataAnalysisExports />} />
                 <Route path="/data-analysis/settings" element={<DataAnalysisSettings />} />
+                <Route path="/data-analysis/portfolio" element={<PublicProfileEditor />} />
                 <Route path="/data-analysis/segments" element={<DataAnalysisSegments />} />
                 <Route path="/data-analysis/report-files" element={<DataAnalysisReportFiles />} />
                 <Route path="/data-analysis/workspace" element={<DataAnalysisWorkspace />} />
@@ -357,6 +360,7 @@ export default function App() {
                 <Route path="/security/reports" element={<SecurityReports />} />
                 <Route path="/security/report-files" element={<SecurityReportFiles />} />
                 <Route path="/security/settings" element={<SecuritySettings />} />
+                <Route path="/security/portfolio" element={<PublicProfileEditor />} />
                 <Route path="/security/search" element={<SecuritySearch />} />
                 <Route path="/security/profile" element={<SecurityProfile />} />
                 <Route path="/security/messages" element={<Messages />} />
@@ -380,6 +384,7 @@ export default function App() {
                 <Route path="/admin/search" element={<AdminSearchResults />} />
 
                 <Route path="/admin/settings" element={<AdminSettings />} />
+                <Route path="/admin/portfolio" element={<PublicProfileEditor />} />
                 <Route path="/student/settings" element={<StudentSettings />} />
 
                 {/* بند 9 (Supervisors)، جزء 3 — بورتال المشرف الشخصي.
@@ -398,6 +403,7 @@ export default function App() {
                 {/* بند 14 (Graduation) — rubric grading، شوف SupervisorProjectGradeApiController الجديدة. */}
                 <Route path="/supervisor/projects/:id/grade" element={<SupervisorProjectGrade />} />
                 <Route path="/supervisor/settings" element={<SupervisorSettings />} />
+                <Route path="/supervisor/portfolio" element={<PublicProfileEditor />} />
                 <Route path="/supervisor/messages" element={<Messages />} />
                 <Route path="/supervisor/notifications" element={<Notifications />} />
 

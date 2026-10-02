@@ -15,12 +15,12 @@ import { usePageMetaValue } from '../context/PageMetaContext';
 const TXT = {
   en: {
     toggle: 'Toggle sidebar', noNotif: 'No new notifications', viewAll: 'View all notifications',
-    profile: 'Profile', settings: 'Settings', logout: 'Log out', switchLang: 'Switch to English', theme: 'Toggle theme', bell: 'Notifications',
+    profile: 'Profile', publicProfile: 'Public profile', settings: 'Settings', logout: 'Log out', switchLang: 'Switch to English', theme: 'Toggle theme', bell: 'Notifications',
     now: 'just now', m: (n) => `${n}m ago`, h: (n) => `${n}h ago`, d: (n) => `${n}d ago`,
   },
   ar: {
     toggle: 'تبديل القائمة الجانبية', noNotif: 'لا توجد إشعارات جديدة', viewAll: 'عرض كل الإشعارات',
-    profile: 'الملف الشخصي', settings: 'الإعدادات', logout: 'تسجيل الخروج', switchLang: 'التبديل للإنجليزية', theme: 'تبديل المظهر', bell: 'الإشعارات',
+    profile: 'الملف الشخصي', publicProfile: 'الملف العام', settings: 'الإعدادات', logout: 'تسجيل الخروج', switchLang: 'التبديل للإنجليزية', theme: 'تبديل المظهر', bell: 'الإشعارات',
     now: 'الآن', m: (n) => `منذ ${n} د`, h: (n) => `منذ ${n} س`, d: (n) => `منذ ${n} يوم`,
   },
 };
@@ -277,6 +277,7 @@ export default function Topbar({ role, user, onMenuClick, onLogout, collapsed = 
           }
         >
           <Link to={`/${prefix}/profile`} className="dropdown__item"><Icon name="user" size={16} /> {tx.profile}</Link>
+          <Link to={`/${prefix}/portfolio`} className="dropdown__item"><Icon name="link" size={16} /> {tx.publicProfile}</Link>
           <Link to={`/${prefix}/settings`} className="dropdown__item"><Icon name="settings" size={16} /> {tx.settings}</Link>
           <div className="divider" style={{ margin: 'var(--space-2) 0' }} />
           <button
