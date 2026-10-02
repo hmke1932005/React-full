@@ -13,6 +13,18 @@ const LINK_ICONS = {
   presentation: 'monitor', research_paper: 'file', other: 'link',
 };
 
+const SOCIAL_ICONS = { github: 'github', linkedin: 'linkedin', portfolio: 'globe', website: 'globe' };
+
+const ROLE_LABELS = {
+  supervisor: ['Supervisor', 'مشرف'],
+  professor: ['Professor', 'أستاذ'],
+  principal_investigator: ['Principal Investigator', 'الباحث الرئيسي'],
+  teaching_assistant: ['Teaching Assistant', 'معيد'],
+  collaborator: ['Collaborator', 'متعاون'],
+  student_member: ['Team member', 'عضو فريق'],
+  external_collaborator: ['External collaborator', 'متعاون خارجي'],
+};
+
 function safeJsonArray(raw) {
   if (Array.isArray(raw)) return raw;
   try {
@@ -23,21 +35,38 @@ function safeJsonArray(raw) {
   }
 }
 
+// Screenshot of the student's live site (used only when no cover/featured image exists).
 function livePreviewUrl(url) {
   if (!url || !/^https?:\/\//i.test(url)) return null;
-  return `https://s0.wp.com/mshots/v1/${encodeURIComponent(url)}?w=1200&h=650`;
+  return `https://s0.wp.com/mshots/v1/${encodeURIComponent(url)}?w=1200&h=750`;
+}
+
+function hostOf(url) {
+  try { return new URL(url).host.replace(/^www\./, ''); } catch { return ''; }
+}
+
+function initials(name) {
+  const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return '?';
+  return (parts[0][0] + (parts[1] ? parts[1][0] : '')).toUpperCase();
+}
+
+function Avatar({ name, src, size = 'md' }) {
+  const [broken, setBroken] = useState(false);
+  return (
+    <span className={`lp2-pd__avatar lp2-pd__avatar--${size}`} aria-hidden="true">
+      {src && !broken ? <img src={src} alt="" loading="lazy" onError={() => setBroken(true)} /> : initials(name)}
+    </span>
+  );
 }
 
 /**
- * Port of app/Views/public/projects/show.php — same section order/classes
- * (.pp-window--standalone hero, .pp-gallery + .pp-lightbox media gallery,
- * links/docs, team, contact) talking to GET /api/v1/public/projects/{slug}
- * instead of the PHP-rendered view. "Contact the team" and the github/demo/
- * file click-tracking redirects (spec §18/§19) stay web-only for now —
- * PublicApiController's docblock — so this links straight to the raw URLs
- * instead of the PHP /go/ tracked redirects, and the message form is
- * disabled with a note rather than silently failing against a route that
- * doesn't exist yet.
+ * Public project page — GET /api/v1/public/projects/{slug}.
+ * Hero (cover / uploaded screenshot / live-site preview in a browser frame),
+ * about, tech stack, SDGs, gallery, owner student, supervisors/doctors, team,
+ * links, documents and contact. Emails/social links are returned by the API
+ * only for logged-in viewers (or PROJECT_CONTACTS_PUBLIC=true); guests get
+ * names/roles plus a "log in to see contacts" prompt.
  */
 export default function ProjectDetail() {
   const { slug } = useParams();
@@ -48,19 +77,22 @@ export default function ProjectDetail() {
 
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
-  const [lightbox, setLightbox] = useState(null); // index into media, or null
+  const [lightbox, setLightbox] = useState(null);
   const [contactMessage, setContactMessage] = useState('');
   const [contactNote, setContactNote] = useState('');
+  const [heroBroken, setHeroBroken] = useState(false);
 
+  // Re-fetch when auth status changes so contact emails appear right after login.
   useEffect(() => {
     let alive = true;
     setData(null);
     setError(null);
+    setHeroBroken(false);
     api.get(`/api/v1/public/projects/${encodeURIComponent(slug)}`)
       .then((json) => { if (alive) setData(json.data); })
       .catch((err) => { if (alive) setError(err); });
     return () => { alive = false; };
-  }, [slug]);
+  }, [slug, status]);
 
   useEffect(() => {
     if (lightbox === null) return undefined;
@@ -83,16 +115,21 @@ export default function ProjectDetail() {
     const depName = (isAr ? p.department_name_ar : p.department_name_en) || '';
     const tags = safeJsonArray(p.tags);
     const technologies = safeJsonArray(p.technologies);
+    const keywords = safeJsonArray(p.keywords);
+    const sdgs = safeJsonArray(p.sdgs);
     const media = data.media || [];
     const mediaIds = new Set(media.map((m) => m.id));
     const otherFiles = (data.files || []).filter((f) => !mediaIds.has(f.id));
     const links = data.links || [];
     const liveLink = links.find((l) => l.type === 'live_demo' || l.type === 'website') || null;
-    const heroCover = p.cover_image_path || '';
-    const heroLivePreview = heroCover ? null : livePreviewUrl(liveLink?.url);
-    const heroInitial = (title || 'U').charAt(0).toUpperCase();
+    const repoLink = links.find((l) => l.type === 'github' || l.type === 'gitlab') || null;
+    const featuredImage = media.find((m) => m.file_type === 'image' && m.is_featured) || media.find((m) => m.file_type === 'image');
+    const coverSrc = p.cover_image_path
+      ? `/${String(p.cover_image_path).replace(/^\//, '')}`
+      : (featuredImage?.url || '');
+    const heroLivePreview = coverSrc ? null : livePreviewUrl(liveLink?.url);
     const isOwner = status === 'authenticated' && user && Number(user.id) === Number(p.owner_id);
-    return { p, title, uniName, facName, depName, tags, technologies, media, otherFiles, links, liveLink, heroCover, heroLivePreview, heroInitial, isOwner };
+    return { p, title, uniName, facName, depName, tags, technologies, keywords, sdgs, media, otherFiles, links, liveLink, repoLink, coverSrc, heroLivePreview, isOwner };
   }, [data, isAr, status, user]);
 
   const shell = (children) => (
@@ -127,20 +164,58 @@ export default function ProjectDetail() {
     );
   }
 
-  const { p, title, uniName, facName, depName, tags, technologies, media, otherFiles, links, liveLink, heroCover, heroLivePreview, heroInitial, isOwner } = shaped;
+  const { p, title, uniName, facName, depName, tags, technologies, keywords, sdgs, media, otherFiles, links, liveLink, repoLink, coverSrc, heroLivePreview, isOwner } = shaped;
   const current = lightbox !== null ? media[lightbox] : null;
-  const team = (data.team_members || []).filter((m) => m.status === 'accepted');
+  const loggedIn = status === 'authenticated';
+  const contactsVisible = Boolean(data.contacts_visible);
+  const num = (n) => Number(n).toLocaleString(isAr ? 'ar-EG' : 'en-US');
+  const loginUrl = `/auth/login?redirect=${encodeURIComponent(`/projects/${p.slug || p.uuid}`)}`;
+
+  // People: new `people` block, with a graceful fallback to the old payload.
+  const people = data.people || {};
+  const owner = people.owner || (p.owner_name ? { full_name: p.owner_name } : null);
+  const supervisors = people.supervisors?.length
+    ? people.supervisors
+    : (p.supervisor_name ? [{ name: p.supervisor_name, role: 'supervisor' }] : []);
+  const team = people.team || (data.team_members || [])
+    .filter((m) => m.status === 'accepted')
+    .map((m) => ({ id: m.id, name: m.display_name, role: m.role, academic_year: m.academic_year, student_number: m.student_number }));
+  const hasPeople = Boolean(owner) || supervisors.length > 0 || team.length > 0;
+  const anyEmail = Boolean(owner?.email) || supervisors.some((s) => s.email) || team.some((m) => m.email);
+
   const views = (Number(p.views_count) || 0) + 1;
   const likes = Number(p.likes_count) || 0;
+  const fmtDate = (d) => {
+    if (!d) return '';
+    const dt = new Date(String(d).replace(' ', 'T'));
+    return Number.isNaN(dt.getTime()) ? '' : dt.toLocaleDateString(isAr ? 'ar-EG' : 'en-GB', { year: 'numeric', month: 'short', day: 'numeric' });
+  };
+  const published = fmtDate(p.published_at);
+  const timeline = p.timeline_start || p.timeline_end
+    ? [fmtDate(p.timeline_start), fmtDate(p.timeline_end)].filter(Boolean).join(' → ')
+    : '';
+  const roleLabel = (role) => { const r = ROLE_LABELS[role]; return r ? t(r[0], r[1]) : (role || ''); };
+  const sdgLabel = (s) => (/^\d+$/.test(String(s)) ? `${t('SDG', 'هدف')} ${s}` : String(s));
+  const uniLogo = p.university_logo_path ? `/${String(p.university_logo_path).replace(/^\//, '')}` : null;
+  const showImg = coverSrc && !heroBroken;
+  const showLive = !coverSrc && heroLivePreview && !heroBroken;
+  const frameHost = hostOf(liveLink?.url) || hostOf(repoLink?.url) || (slug || '');
+
   const facts = [
     uniName && ['building', t('University', 'الجامعة'), p.university_slug
       ? <Link to={`/universities/${encodeURIComponent(p.university_slug)}`}>{uniName}</Link> : uniName],
     facName && ['layers', t('Faculty', 'الكلية'), facName],
     depName && ['folder', t('Department', 'القسم'), depName],
     p.category && ['projects', t('Category', 'التصنيف'), p.category],
-    ['eye', t('Views', 'المشاهدات'), views],
-    likes > 0 && ['heart', t('Likes', 'الإعجابات'), likes],
+    published && ['calendar', t('Published', 'تاريخ النشر'), published],
+    timeline && ['clock', t('Timeline', 'المدة'), timeline],
   ].filter(Boolean);
+
+  const mail = (email) => (
+    <a className="lp2-pd__mail" href={`mailto:${email}`}>
+      <Icon name="mail" size={13} /> <span>{email}</span>
+    </a>
+  );
 
   return shell(
     <main className="lp2-pd lp2-shell">
@@ -155,39 +230,80 @@ export default function ProjectDetail() {
         </div>
         <h1>{title}</h1>
         {p.summary && <p className="lp2-pd__summary">{p.summary}</p>}
+        {(uniName || facName) && (
+          <div className="lp2-pd__org">
+            {uniLogo
+              ? <img className="lp2-pd__org-logo" src={uniLogo} alt="" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+              : <span className="lp2-icon"><Icon name="building" size={16} /></span>}
+            <span>
+              {p.university_slug
+                ? <Link to={`/universities/${encodeURIComponent(p.university_slug)}`}>{uniName}</Link>
+                : uniName}
+              {facName && <em> · {facName}</em>}
+              {depName && <em> · {depName}</em>}
+            </span>
+          </div>
+        )}
       </header>
+
+      <div className="lp2-pd__stats animate-rise-in">
+        <div><Icon name="eye" size={16} /><strong>{num(views)}</strong><span>{t('Views', 'مشاهدة')}</span></div>
+        <div><Icon name="heart" size={16} /><strong>{num(likes)}</strong><span>{t('Likes', 'إعجاب')}</span></div>
+        <div><Icon name="users" size={16} /><strong>{num(team.length + (owner ? 1 : 0))}</strong><span>{t('Members', 'عضو')}</span></div>
+        <div><Icon name="link" size={16} /><strong>{num(links.length + otherFiles.length)}</strong><span>{t('Links & files', 'روابط وملفات')}</span></div>
+      </div>
 
       <div className="lp2-pd__grid">
         <div className="lp2-pd__main">
-          {(heroCover || heroLivePreview) && (
-            <div className="lp2-pd__hero animate-rise-in">
-              {heroCover ? (
-                <img src={`/${heroCover.replace(/^\//, '')}`} alt={title || t('Project cover image', 'صورة المشروع')} />
-              ) : (
-                <img
-                  src={heroLivePreview}
-                  alt={`${title || t('Project', 'المشروع')}${t(' — live preview', ' — معاينة حية')}`}
-                  onError={(e) => {
-                    const div = document.createElement('div');
-                    div.className = 'pp-window__placeholder';
-                    div.setAttribute('aria-hidden', 'true');
-                    div.innerHTML = `<span>${heroInitial}</span>`;
-                    e.currentTarget.replaceWith(div);
-                  }}
-                />
-              )}
-              {liveLink && <span className="lp2-pd__live"><span className="pp-live__dot" />{t('Live', 'شغّال')}</span>}
+          {(showImg || showLive || liveLink) && (
+            <div className="lp2-pd__browser animate-rise-in">
+              <div className="lp2-pd__browser-bar">
+                <span className="lp2-pd__dots" aria-hidden="true"><i /><i /><i /></span>
+                <span className="lp2-pd__urlbar"><Icon name="lock" size={12} /> {frameHost}</span>
+                {liveLink && <span className="lp2-pd__live"><span className="pp-live__dot" />{t('Live', 'شغّال')}</span>}
+              </div>
+              <div className="lp2-pd__screen">
+                {showImg || showLive ? (
+                  <img
+                    src={showImg ? coverSrc : heroLivePreview}
+                    alt={showImg ? (title || t('Project cover image', 'صورة المشروع')) : `${title} — ${t('live preview', 'معاينة حية')}`}
+                    onError={() => setHeroBroken(true)}
+                  />
+                ) : (
+                  <div className="lp2-pd__screen-ph" aria-hidden="true"><span>{(title || 'U').charAt(0).toUpperCase()}</span></div>
+                )}
+              </div>
             </div>
           )}
 
           {p.description && (
             <section className="lp2-card lp2-pd__sec">
-              <h2>{t('About this project', 'عن المشروع')}</h2>
+              <h2><Icon name="info" size={18} /> {t('About this project', 'عن المشروع')}</h2>
               <div className="lp2-pd__prose">{p.description}</div>
-              {(tags.length > 0 || technologies.length > 0) && (
-                <div className="lp2-pd__chips">
-                  {technologies.map((tech, i) => <span className="lp2-tag lp2-tag--brand" key={`tech-${i}`}>{tech}</span>)}
-                  {tags.map((tag, i) => <span className="lp2-tag lp2-tag--static" key={`tag-${i}`}>{tag}</span>)}
+            </section>
+          )}
+
+          {(technologies.length > 0 || tags.length > 0 || keywords.length > 0 || sdgs.length > 0) && (
+            <section className="lp2-card lp2-pd__sec">
+              <h2><Icon name="terminal" size={18} /> {t('Technologies & topics', 'التقنيات والمواضيع')}</h2>
+              {technologies.length > 0 && (
+                <div className="lp2-pd__group">
+                  <h3>{t('Tech stack', 'التقنيات المستخدمة')}</h3>
+                  <div className="lp2-pd__chips-row">{technologies.map((x, i) => <span className="lp2-tag lp2-tag--brand" key={`tech-${i}`}>{x}</span>)}</div>
+                </div>
+              )}
+              {sdgs.length > 0 && (
+                <div className="lp2-pd__group">
+                  <h3>{t('Sustainable Development Goals', 'أهداف التنمية المستدامة')}</h3>
+                  <div className="lp2-pd__chips-row">{sdgs.map((x, i) => <span className="lp2-tag lp2-tag--sdg" key={`sdg-${i}`}><Icon name="globe" size={13} /> {sdgLabel(x)}</span>)}</div>
+                </div>
+              )}
+              {(tags.length > 0 || keywords.length > 0) && (
+                <div className="lp2-pd__group">
+                  <h3>{t('Tags & keywords', 'الوسوم والكلمات المفتاحية')}</h3>
+                  <div className="lp2-pd__chips-row">
+                    {[...tags, ...keywords.filter((k) => !tags.includes(k))].map((x, i) => <span className="lp2-tag lp2-tag--static" key={`tag-${i}`}>{x}</span>)}
+                  </div>
                 </div>
               )}
             </section>
@@ -195,7 +311,7 @@ export default function ProjectDetail() {
 
           {media.length > 0 && (
             <section className="lp2-card lp2-pd__sec">
-              <h2>{t('Media Gallery', 'معرض الوسائط')}</h2>
+              <h2><Icon name="image" size={18} /> {t('Media Gallery', 'معرض الوسائط')}</h2>
               <div className="pp-gallery">
                 {media.map((m, i) => {
                   const thumb = m.file_type === 'image' ? m.url : m.thumbnail_url;
@@ -211,7 +327,7 @@ export default function ProjectDetail() {
                       ) : (
                         <div className="pp-gallery__placeholder" aria-hidden="true"><Icon name="file" size={22} /></div>
                       )}
-                      {m.file_type !== 'image' && <span className="pp-gallery__play"><Icon name="monitor" size={18} /></span>}
+                      {m.file_type !== 'image' && <span className="pp-gallery__play"><Icon name="play" size={18} /></span>}
                       {(m.caption || m.original_name) && <span className="pp-gallery__caption">{m.caption || m.original_name}</span>}
                     </button>
                   );
@@ -248,20 +364,90 @@ export default function ProjectDetail() {
             </section>
           )}
 
-          {team.length > 0 && (
+          {hasPeople && (
             <section className="lp2-card lp2-pd__sec">
-              <h2>{t('Team', 'فريق العمل')}</h2>
-              <div className="lp2-pd__team">
-                {team.map((m) => (
-                  <div key={m.id} className="lp2-pd__member">
-                    <span className="lp2-icon"><Icon name="user" size={16} /></span>
-                    <div>
-                      <strong>{m.display_name}</strong>
-                      {m.role && <span>{m.role}</span>}
+              <h2><Icon name="users" size={18} /> {t('People behind the project', 'القائمون على المشروع')}</h2>
+
+              {!contactsVisible && (
+                <div className="lp2-pd__lock">
+                  <Icon name="lock" size={16} />
+                  <span>{t('Contact emails and links are visible to logged-in users only.', 'إيميلات ولينكات التواصل بتظهر للمستخدمين المسجّلين بس.')}</span>
+                  {!loggedIn && <Link to={loginUrl}>{t('Log in', 'سجّل دخولك')}</Link>}
+                </div>
+              )}
+
+              {owner && (
+                <div className="lp2-pd__group">
+                  <h3>{t('Project owner (student)', 'صاحب المشروع (الطالب)')}</h3>
+                  <article className="lp2-pd__owner">
+                    <Avatar name={owner.full_name} src={owner.avatar_url} size="lg" />
+                    <div className="lp2-pd__owner-body">
+                      <strong>{owner.full_name}</strong>
+                      <span className="lp2-pd__sub">
+                        {[owner.student_number && `${t('ID', 'رقم')} ${owner.student_number}`,
+                          owner.academic_year && `${t('Year', 'الفرقة')} ${owner.academic_year}`,
+                          facName, depName].filter(Boolean).join(' · ')}
+                      </span>
+                      {owner.bio && <p>{owner.bio}</p>}
+                      {owner.skills?.length > 0 && (
+                        <div className="lp2-pd__chips-row">{owner.skills.map((s, i) => <span className="lp2-tag lp2-tag--static" key={i}>{s}</span>)}</div>
+                      )}
+                      <div className="lp2-pd__contact">
+                        {owner.email && mail(owner.email)}
+                        {Object.entries(owner.social_links || {}).map(([k, url]) => (
+                          <a key={k} className="lp2-pd__mail" href={url} target="_blank" rel="noopener noreferrer">
+                            <Icon name={SOCIAL_ICONS[k] || 'link'} size={13} /> <span>{k}</span>
+                          </a>
+                        ))}
+                      </div>
                     </div>
+                  </article>
+                </div>
+              )}
+
+              {supervisors.length > 0 && (
+                <div className="lp2-pd__group">
+                  <h3>{t('Supervisors & doctors', 'المشرفون والدكاترة')}</h3>
+                  <div className="lp2-pd__people">
+                    {supervisors.map((s, i) => (
+                      <article className="lp2-pd__person" key={`sv-${i}`}>
+                        <Avatar name={s.name} src={s.avatar_url} />
+                        <div>
+                          <strong>{s.name}</strong>
+                          <span className="lp2-pd__sub">
+                            {[(isAr ? s.title_ar : s.title_en) || s.title, roleLabel(s.role), s.department].filter(Boolean).join(' · ')}
+                          </span>
+                          {s.email && mail(s.email)}
+                        </div>
+                      </article>
+                    ))}
                   </div>
-                ))}
-              </div>
+                </div>
+              )}
+
+              {team.length > 0 && (
+                <div className="lp2-pd__group">
+                  <h3>{t('Team members', 'أعضاء الفريق')}</h3>
+                  <div className="lp2-pd__people">
+                    {team.map((m, i) => (
+                      <article className="lp2-pd__person" key={m.id ?? `tm-${i}`}>
+                        <Avatar name={m.name} src={m.avatar_url} />
+                        <div>
+                          <strong>{m.name}</strong>
+                          <span className="lp2-pd__sub">
+                            {[roleLabel(m.role), m.academic_year && `${t('Year', 'الفرقة')} ${m.academic_year}`, m.student_number && `${t('ID', 'رقم')} ${m.student_number}`].filter(Boolean).join(' · ')}
+                          </span>
+                          {m.email && mail(m.email)}
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {contactsVisible && !anyEmail && (
+                <p className="lp2-pd__muted">{t('No contact emails were provided for this project.', 'مفيش إيميلات تواصل متاحة للمشروع ده.')}</p>
+              )}
             </section>
           )}
         </div>
@@ -273,7 +459,12 @@ export default function ProjectDetail() {
                 <Icon name="globe" size={16} /> {t('Visit live project', 'زيارة المشروع مباشرة')}
               </a>
             )}
-            <dl className="lp2-pd__facts">
+            {repoLink && (
+              <a href={repoLink.url} target="_blank" rel="noopener noreferrer" className="btn btn-outline lp2-pd__cta lp2-pd__cta--gap">
+                <Icon name="github" size={16} /> {t('View source code', 'الكود المصدري')}
+              </a>
+            )}
+            <dl className={`lp2-pd__facts${liveLink || repoLink ? ' lp2-pd__facts--spaced' : ''}`}>
               {facts.map(([icon, label, value]) => (
                 <div key={label}>
                   <dt><Icon name={icon} size={14} /> {label}</dt>
@@ -307,7 +498,7 @@ export default function ProjectDetail() {
             <h2>{t('Contact the Team', 'تواصل مع الفريق')}</h2>
             {isOwner ? (
               <p className="lp2-pd__muted">{t('This is your own project.', 'ده مشروعك انت.')}</p>
-            ) : status === 'authenticated' ? (
+            ) : loggedIn ? (
               <form onSubmit={(e) => { e.preventDefault(); setContactNote(t("Messaging the project team isn't available from this page yet — try Messages from your dashboard.", 'التواصل مع فريق المشروع من هنا لسه مش متاح — جرّب صفحة الرسائل من لوحة التحكم.')); }}>
                 {contactNote && (
                   <div className="lp2-pd__note"><Icon name="alert-triangle" size={16} /><span>{contactNote}</span></div>
@@ -322,9 +513,7 @@ export default function ProjectDetail() {
             ) : (
               <>
                 <p className="lp2-pd__muted">{t("Log in to contact this project's team.", 'سجّل دخولك عشان تتواصل مع فريق المشروع.')}</p>
-                <Link to={`/auth/login?redirect=${encodeURIComponent(`/projects/${p.slug || p.uuid}`)}`} className="btn btn-outline lp2-pd__cta">
-                  {t('Log in', 'تسجيل الدخول')}
-                </Link>
+                <Link to={loginUrl} className="btn btn-outline lp2-pd__cta">{t('Log in', 'تسجيل الدخول')}</Link>
               </>
             )}
           </div>
