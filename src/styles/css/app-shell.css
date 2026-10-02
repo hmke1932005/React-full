@@ -9,6 +9,13 @@
 .app-shell__content { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .app-shell__main { flex: 1; min-width: 0; padding: var(--space-6); max-width: var(--content-max-width); width: 100%; margin-inline: auto; }
 
+/* Desktop sidebar spans the full height of the page (not a 100vh sticky panel):
+   it stretches with the content column on every page. The mobile drawer
+   (<= 768px, responsive.css) is unaffected. */
+@media (min-width: 769px) {
+  .app-shell .sidebar { position: relative; top: auto; height: auto; min-height: 100vh; align-self: stretch; }
+}
+
 .sidebar.is-collapsed { width: var(--sidebar-width-collapsed); }
 .sidebar.is-collapsed .sidebar__link span,
 .sidebar.is-collapsed .sidebar__section-title,
