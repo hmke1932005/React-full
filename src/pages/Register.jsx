@@ -102,9 +102,13 @@ export default function Register() {
     setHierarchyLoading(true);
     try {
       const json = await api.get(`/api/v1/auth/university-hierarchy/${id}`);
-      setFaculties(json.data?.faculties || []);
-      setAllDepartments(json.data?.departments || []);
-      setAllPrograms(json.data?.programs || []);
+      // This endpoint returns the raw tree ({faculties, departments, programs})
+      // — not the usual {success, data} envelope — so read the top level and
+      // fall back to `data` in case it's ever wrapped.
+      const tree = json?.faculties ? json : (json?.data || {});
+      setFaculties(tree.faculties || []);
+      setAllDepartments(tree.departments || []);
+      setAllPrograms(tree.programs || []);
     } catch {
       setFaculties([]);
       setAllDepartments([]);
