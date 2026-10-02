@@ -298,6 +298,8 @@ export default function AiAssistantWidget({ role, user }) {
     return {
       portal,
       page: (document.title || location.pathname || '').slice(0, 200),
+      route: `${location.pathname}`.slice(0, 200),
+      locale,
       project: extra.project || undefined,
       dashboard: extra.dashboard || undefined,
     };
@@ -339,8 +341,7 @@ export default function AiAssistantWidget({ role, user }) {
       streamTurn(convId, {
         content,
         attachment_ids: attachmentIds,
-        portal,
-        page: (document.title || location.pathname || '').slice(0, 200),
+        ...buildContextPayload(),
       }, `${API}/conversations/${convId}/messages`, tempId);
     });
   }
