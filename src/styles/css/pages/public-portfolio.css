@@ -39,6 +39,14 @@
 }
 [dir="rtl"] .pf-page { font-family: var(--font-body-rtl, 'Cairo', 'Inter', sans-serif); }
 
+/* Sticky footer: .pf-page is min-height:100vh, so on short pages (little
+   content) the footer used to sit right under the content with the beige
+   canvas showing *below* it. Make the page a column and let the shell grow
+   so the footer is always pinned to the bottom, like the rest of the site. */
+.pf-page { display: flex; flex-direction: column; }
+.pf-page > .pf-shell { width: 100%; flex: 1 0 auto; box-sizing: border-box; }
+.pf-page > .uip-footer { flex-shrink: 0; }
+
 [data-theme="dark"] .pf-page {
   --bg-canvas: #111214;
   --bg-surface: #18191D;
