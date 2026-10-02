@@ -1,0 +1,4 @@
+/* rtl.css — Arabic (RTL) layout overrides. Loaded only when html[dir="rtl"]. */
+[dir="rtl"] .sidebar { right: 0; left: auto; border-inline-start: none; border-inline-end: 1px solid var(--border-subtle); }
+[dir="rtl"] .icon-flip { transform: scaleX(-1); }
+[dir="rtl"] .badge-coming-soon { transform-origin: right; }

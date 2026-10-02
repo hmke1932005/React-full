@@ -1,0 +1,25 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# Backend proxy (the app calls relative /api and /uploads URLs)
+[[redirects]]
+  from = "/api/*"
+  to = "https://full-api-production-084f.up.railway.app/api/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/uploads/*"
+  to = "https://full-api-production-084f.up.railway.app/uploads/:splat"
+  status = 200
+  force = true
+
+# SPA fallback so deep links like /projects/abc work on refresh
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

@@ -1,0 +1,28 @@
+// Auto-extracted from api/app/Views/admin/innovation-statistics.php ($locale === 'ar' ? AR : EN pairs).
+// Shape matches useTranslations(dict) in context/LanguageContext.jsx.
+export default {
+  'All Departments': 'كل الأقسام',
+  'All Universities': 'كل الجامعات',
+  'Department': 'القسم',
+  'Faculty Comparison': 'مقارنة الكليات',
+  'Filter': 'تصفية',
+  'From': 'من تاريخ',
+  'Innovation Statistics': 'إحصاءات الابتكار',
+  'Most Common Fields': 'أكثر المجالات شيوعاً',
+  'New': 'جديد',
+  'No analyzed projects yet.': 'لا توجد مشاريع تم تحليلها بعد.',
+  'No categorized projects yet.': 'لا توجد مشاريع مصنّفة بمجال بعد.',
+  'No data': 'لا توجد بيانات',
+  'Not enough data yet to compare by faculty.': 'لا توجد بيانات كافية بعد للمقارنة حسب الكلية.',
+  'Not enough data yet to compute trends.': 'لا توجد بيانات كافية بعد لحساب الاتجاهات.',
+  'Pick a university first': 'اختر جامعة أولاً',
+  'Readiness Score Distribution': 'توزيع درجات الجاهزية',
+  'Reset': 'إعادة تعيين',
+  'Semester': 'الفصل',
+  'Semester Comparison': 'مقارنة الفصول الدراسية',
+  'To': 'إلى تاريخ',
+  'Trend Analysis': 'تحليل الاتجاهات',
+  'University': 'الجامعة',
+  'University Comparison': 'مقارنة الجامعات',
+  'View All Trends': 'كل الاتجاهات',
+};

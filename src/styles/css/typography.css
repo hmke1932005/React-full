@@ -1,0 +1,12 @@
+/* typography.css — type scale utility classes */
+.text-display-xl { font-family: var(--font-display); font-size: var(--text-display-xl); font-weight: 800; line-height: var(--leading-tight); }
+.text-display-lg { font-family: var(--font-display); font-size: var(--text-display-lg); font-weight: 700; line-height: var(--leading-tight); }
+.text-h1 { font-family: var(--font-display); font-size: var(--text-h1); font-weight: 700; }
+.text-h2 { font-family: var(--font-display); font-size: var(--text-h2); font-weight: 700; }
+.text-h3 { font-family: var(--font-display); font-size: var(--text-h3); font-weight: 600; }
+.text-body { font-size: var(--text-body); }
+.text-small { font-size: var(--text-small); }
+.text-caption { font-size: var(--text-caption); letter-spacing: 0.02em; text-transform: uppercase; color: var(--text-secondary); }
+.text-muted { color: var(--text-secondary); }
+.text-mono { font-family: var(--font-mono); }
+.text-h4 { font-family: var(--font-display); font-size: 1rem; font-weight: 600; }
