@@ -7,17 +7,12 @@ import SiteFooter from '../components/SiteFooter';
 import PublicTopbar from '../components/PublicTopbar';
 
 /**
- * Public university page — reached at /u/{uuid} with no login required.
- * Sibling of PublicPortfolio.jsx (/p/{uuid}, student): same no-auth
- * pattern, same
- * .public-projects-grid / .card-project markup reused as-is. Talks to
- * GET /api/v1/public/universities/{uuid} (PublicApiController::
- * universityProfile() — the unauthenticated twin of
- * UniversitiesApiController::me(), which is also where this page's own
- * share_url comes from on the University > Portfolio settings screen).
- * 404 (missing uuid, or a university that hasn't turned "Make profile
- * public" on) is a single "not found" state, same rule as the sibling
- * pages — the API never distinguishes the two reasons.
+ * Public university page — /u/{uuid}, no login required.
+ * Talks to GET /api/v1/public/universities/{uuid} (PublicApiController::universityProfile()).
+ * 404 (missing uuid, or a university with "Make profile public" off) is one "not found" state.
+ *
+ * Same design language as PublicPortfolio.jsx (/p/{uuid}): scoped to .pf-page in
+ * styles/css/pages/public-portfolio.css, Light + Dark, RTL-aware. No new backend data needed.
  */
 export default function PublicUniversityProfile() {
   const { uuid } = useParams();
@@ -27,6 +22,7 @@ export default function PublicUniversityProfile() {
 
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -38,21 +34,43 @@ export default function PublicUniversityProfile() {
     return () => { alive = false; };
   }, [uuid]);
 
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch { /* clipboard blocked — ignore */ }
+  };
+
   if (error) {
     return (
-      <div className="public-wrap" style={{ textAlign: 'center' }}>
-        <PublicTopbar />
-        <p className="text-h3" style={{ marginBottom: 'var(--space-3)' }}>{t('University page not found.', 'صفحة الجامعة غير موجودة.')}</p>
-        <Link to="/projects" className="btn btn-primary">{t('Browse projects', 'تصفّح المشاريع')}</Link>
+      <div className="pf-page">
+        <div className="pf-shell">
+          <PublicTopbar />
+          <div className="pf-card pf-state">
+            <Icon name="building" size={34} />
+            <h1>{t('University page not found', 'صفحة الجامعة غير موجودة')}</h1>
+            <p>{t('This profile does not exist or is not public.', 'الصفحة دي مش موجودة أو مش متاحة للعامة.')}</p>
+            <Link to="/projects" className="pf-btn pf-btn--primary">{t('Browse projects', 'تصفّح المشاريع')}</Link>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (!data) {
     return (
-      <div className="public-wrap">
-        <PublicTopbar />
-        <div style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>{t('Loading…', 'جارِ التحميل…')}</div>
+      <div className="pf-page">
+        <div className="pf-shell">
+          <PublicTopbar />
+          <div className="pf-layout" aria-busy="true" aria-label={t('Loading…', 'جارِ التحميل…')}>
+            <div className="pf-skel" style={{ height: 420 }} />
+            <div className="pf-main">
+              <div className="pf-skel" style={{ height: 90 }} />
+              <div className="pf-skel" style={{ height: 320 }} />
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -60,111 +78,148 @@ export default function PublicUniversityProfile() {
   const uni = data.university || {};
   const projects = data.projects || [];
   const name = isAr ? (uni.official_name_ar || uni.official_name_en) : (uni.official_name_en || uni.official_name_ar);
-  const initial = (name || '?').charAt(0).toUpperCase();
-  const location = [uni.city, uni.country].filter(Boolean).join(', ');
+  const altName = isAr ? uni.official_name_en : uni.official_name_ar;
+  const initial = (name || '?').trim().charAt(0).toUpperCase();
+  const location = [uni.city, uni.country].filter(Boolean).join(isAr ? '، ' : ', ');
+  const verified = uni.verification_status === 'verified';
+  const website = uni.website || '';
+  const websiteLabel = website.replace(/^https?:\/\//, '').replace(/\/$/, '');
+  const liveCount = projects.filter((p) => p.live_demo_url).length;
 
   return (
-    <div className="public-wrap">
-      <PublicTopbar />
+    <div className="pf-page">
+      <div className="pf-shell">
+        <PublicTopbar />
 
-      <div className="card glass-panel animate-rise-in" style={{ padding: 'var(--space-6)', textAlign: 'center' }}>
-        {uni.logo_path ? (
-          <img
-            src={uni.logo_path}
-            alt={name}
-            style={{ width: 88, height: 88, borderRadius: '50%', objectFit: 'cover', margin: '0 auto var(--space-4)' }}
-          />
-        ) : (
-          <div
-            style={{
-              width: 88, height: 88, borderRadius: '50%', background: 'var(--color-primary)', color: 'var(--color-on-primary)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--text-h1)', fontWeight: 800,
-              margin: '0 auto var(--space-4)',
-            }}
-          >
-            {initial}
-          </div>
-        )}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
-          <h1 className="text-h1">{name}</h1>
-          {uni.verification_status === 'verified' && (
-            <span className="badge badge-success"><Icon name="check-circle" size={12} /> {t('Verified', 'موثّقة')}</span>
-          )}
-        </div>
-        {location && (
-          <p className="text-body" style={{ color: 'var(--text-secondary)', marginTop: 'var(--space-2)' }}>{location}</p>
-        )}
-        <div className="grid-2" style={{ maxWidth: 360, margin: 'var(--space-5) auto 0' }}>
-          <div className="card glass-panel" style={{ padding: 'var(--space-4)' }}>
-            <div className="text-caption">{t('Students', 'الطلاب')}</div>
-            <div className="text-h2">{uni.students_count ?? 0}</div>
-          </div>
-          <div className="card glass-panel" style={{ padding: 'var(--space-4)' }}>
-            <div className="text-caption">{t('Published Projects', 'مشاريع منشورة')}</div>
-            <div className="text-h2">{uni.published_projects_count ?? 0}</div>
-          </div>
-        </div>
-      </div>
-
-      <h2 className="text-h2" style={{ marginTop: 'var(--space-7)', marginBottom: 'var(--space-2)' }}>
-        {t('Published Student Projects', 'مشاريع الطلاب المنشورة')}
-      </h2>
-
-      {projects.length === 0 ? (
-        <div className="card glass-panel" style={{ padding: 'var(--space-6)', textAlign: 'center', color: 'var(--text-secondary)' }}>
-          {t('No published projects yet.', 'لا توجد مشاريع منشورة بعد.')}
-        </div>
-      ) : (
-        <div className="public-projects-grid">
-          {projects.map((p) => {
-            const title = (isAr ? p.title?.ar : p.title?.en) || p.title?.en || '';
-            const summary = (isAr ? p.summary?.ar : p.summary?.en) || p.summary?.en || '';
-            const category = (isAr ? p.category?.ar : p.category?.en) || '';
-            const tags = Array.isArray(p.tags) ? p.tags : [];
-            const cover = p.cover_image_path || '';
-            const liveUrl = p.live_demo_url || '';
-            return (
-              <div key={p.id} className="card card-project glass-panel">
-                {cover && (
-                  <img
-                    src={`/${cover.replace(/^\//, '')}`}
-                    alt={title}
-                    loading="lazy"
-                    style={{ width: '100%', aspectRatio: '16/9', objectFit: 'cover', borderRadius: 'var(--radius-md)', marginBottom: 'var(--space-3)' }}
-                  />
-                )}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 'var(--space-2)' }}>
-                  <span className="badge badge-success">{t('Published', 'منشور')}</span>
-                  {liveUrl && (
-                    <a href={liveUrl} target="_blank" rel="noopener noreferrer" className="badge badge-primary" style={{ textDecoration: 'none' }}>
-                      <Icon name="globe" size={12} /> {t('Live', 'شغّال')}
-                    </a>
-                  )}
-                </div>
-                <h3 className="text-h3">{title}</h3>
-                <p className="text-small" style={{ flex: 1 }}>{summary}</p>
-                {tags.length > 0 && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 'var(--space-2)' }}>
-                    {tags.map((tag, i) => <span key={i} className="badge badge-neutral">{String(tag)}</span>)}
-                  </div>
-                )}
-                <div className="card-project__meta">
-                  <Icon name="folder" size={14} /> <span>{category}</span>
-                  {liveUrl && (
-                    <a href={liveUrl} target="_blank" rel="noopener noreferrer" style={{ marginInlineStart: 'auto' }}>
-                      <Icon name="link" size={14} /> {t('Visit demo', 'زيارة المشروع')}
-                    </a>
-                  )}
-                </div>
+        <div className="pf-layout">
+          {/* ---- Profile card ---- */}
+          <aside className="pf-card pf-profile animate-rise-in">
+            <div className="pf-profile__cover" />
+            <div className="pf-profile__body">
+              <div className={`pf-avatar${uni.logo_path ? ' pf-avatar--logo' : ''}`} aria-hidden="true">
+                {uni.logo_path ? <img src={uni.logo_path} alt="" /> : initial}
               </div>
-            );
-          })}
-        </div>
-      )}
+              <h1 className="pf-name">{name}</h1>
+              {altName && altName !== name && <p className="pf-subline">{altName}</p>}
+              {verified && (
+                <span className="pf-verified"><Icon name="check-circle" size={14} />{t('Verified university', 'جامعة موثّقة')}</span>
+              )}
 
-      <p className="text-caption" style={{ textAlign: 'center', marginTop: 'var(--space-7)', color: 'var(--text-secondary)' }}>
-        {t('Public profile powered by', 'ملف عام تم إنشاؤه عبر')} <Link to="/" style={{ color: 'var(--color-primary)' }}>UIP</Link>
-      </p>
+              <div className="pf-stats">
+                <div className="pf-stat"><strong>{uni.students_count ?? 0}</strong><span>{t('Students', 'الطلاب')}</span></div>
+                <div className="pf-stat"><strong>{uni.published_projects_count ?? 0}</strong><span>{t('Published projects', 'مشاريع منشورة')}</span></div>
+              </div>
+
+              {(location || website) && (
+                <ul className="pf-meta">
+                  {location && <li><Icon name="map-pin" size={16} /><span>{location}</span></li>}
+                  {website && (
+                    <li>
+                      <Icon name="globe" size={16} />
+                      <a href={website} target="_blank" rel="noopener noreferrer">{websiteLabel}</a>
+                    </li>
+                  )}
+                </ul>
+              )}
+
+              <div className="pf-actions">
+                <button type="button" className={`pf-btn${copied ? ' is-done' : ''}`} onClick={copyLink}>
+                  <Icon name={copied ? 'check' : 'link'} size={16} />
+                  {copied ? t('Link copied', 'تم نسخ الرابط') : t('Copy profile link', 'نسخ رابط البروفايل')}
+                </button>
+                {website && (
+                  <a href={website} target="_blank" rel="noopener noreferrer" className="pf-btn pf-btn--primary">
+                    <Icon name="globe" size={16} />
+                    {t('Visit website', 'زيارة الموقع')}
+                  </a>
+                )}
+              </div>
+            </div>
+          </aside>
+
+          {/* ---- Main column ---- */}
+          <div className="pf-main">
+            <div className="pf-kpis">
+              <div className="pf-card pf-kpi animate-rise-in">
+                <span className="pf-kpi__ico"><Icon name="users" size={20} /></span>
+                <div><strong>{uni.students_count ?? 0}</strong><span>{t('Students', 'الطلاب')}</span></div>
+              </div>
+              <div className="pf-card pf-kpi animate-rise-in">
+                <span className="pf-kpi__ico"><Icon name="projects" size={20} /></span>
+                <div><strong>{uni.published_projects_count ?? 0}</strong><span>{t('Published projects', 'مشاريع منشورة')}</span></div>
+              </div>
+              <div className="pf-card pf-kpi animate-rise-in">
+                <span className="pf-kpi__ico"><Icon name="globe" size={20} /></span>
+                <div><strong>{liveCount}</strong><span>{t('Live demos', 'عروض شغّالة')}</span></div>
+              </div>
+            </div>
+
+            <section className="pf-card pf-section animate-rise-in">
+              <div className="pf-section__head">
+                <h2 className="pf-section__title"><Icon name="star" size={18} />{t('Published Student Projects', 'مشاريع الطلاب المنشورة')}</h2>
+                {projects.length > 0 && <span className="pf-count">{projects.length}</span>}
+              </div>
+
+              {projects.length === 0 ? (
+                <div className="pf-empty">
+                  <Icon name="folder" size={30} />
+                  <strong>{t('No published projects yet', 'لا توجد مشاريع منشورة بعد')}</strong>
+                  <p>{t('Student projects will appear here once they are published.', 'مشاريع الطلاب هتظهر هنا أول ما تتنشر.')}</p>
+                </div>
+              ) : (
+                <div className="pf-grid">
+                  {projects.map((p) => {
+                    const title = (isAr ? p.title?.ar : p.title?.en) || p.title?.en || p.title?.ar || '';
+                    const summary = (isAr ? p.summary?.ar : p.summary?.en) || p.summary?.en || p.summary?.ar || '';
+                    const category = (isAr ? p.category?.ar : p.category?.en) || p.category?.en || '';
+                    const tags = Array.isArray(p.tags) ? p.tags : [];
+                    const cover = p.cover_image_path || '';
+                    const liveUrl = p.live_demo_url || '';
+                    return (
+                      <article key={p.id} className="pf-project">
+                        <div className="pf-project__media">
+                          {cover ? (
+                            <img src={`/${cover.replace(/^\//, '')}`} alt={title} loading="lazy" />
+                          ) : (
+                            <div className="pf-project__ph">{(title || '?').charAt(0).toUpperCase()}</div>
+                          )}
+                          {liveUrl && (
+                            <a href={liveUrl} target="_blank" rel="noopener noreferrer" className="pf-project__live">
+                              <i /> {t('Live', 'شغّال')}
+                            </a>
+                          )}
+                        </div>
+                        <div className="pf-project__body">
+                          {category && <span className="pf-project__cat">{category}</span>}
+                          <h3 className="pf-project__title">{title}</h3>
+                          {summary && <p className="pf-project__sum">{summary}</p>}
+                          {tags.length > 0 && (
+                            <div className="pf-tags">
+                              {tags.map((tag, i) => <span key={i} className="pf-tag">{String(tag)}</span>)}
+                            </div>
+                          )}
+                          <div className="pf-project__foot">
+                            <span className="pf-badge-pub"><Icon name="check-circle" size={14} />{t('Published', 'منشور')}</span>
+                            {liveUrl && (
+                              <a href={liveUrl} target="_blank" rel="noopener noreferrer">
+                                {t('Visit demo', 'زيارة المشروع')} <Icon name={isAr ? 'arrow-left' : 'arrow-right'} size={14} />
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+          </div>
+        </div>
+
+        <p className="pf-credit">
+          {t('Public profile powered by', 'ملف عام تم إنشاؤه عبر')} <Link to="/">UIP</Link>
+        </p>
+      </div>
 
       <SiteFooter />
     </div>

@@ -167,3 +167,38 @@
 
 .pf-credit { text-align: center; margin: 32px 0 8px; font-size: 12px; color: var(--text-secondary); }
 .pf-credit a { color: var(--color-primary); font-weight: 700; text-decoration: none; }
+
+
+/* ==========================================================================
+   إضافات صفحات الجامعة (/u/:uuid) والكلية العامة — نفس .pf-page بالظبط
+   ========================================================================== */
+.pf-avatar { overflow: hidden; }
+.pf-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pf-avatar--logo { background: var(--bg-surface); }
+.pf-avatar--logo img { object-fit: contain; padding: 8px; }
+
+.pf-verified {
+  display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; padding: 4px 12px; border-radius: 999px;
+  background: rgba(var(--color-success-rgb), .12); color: var(--color-success); font-size: 12px; font-weight: 800;
+}
+.pf-subline { margin: 6px 0 0; font-size: 13.5px; color: var(--text-secondary); line-height: 1.5; overflow-wrap: anywhere; }
+
+.pf-meta { list-style: none; margin: 16px 0 0; padding: 14px 0 0; border-top: 1px solid var(--border-subtle); width: 100%; display: flex; flex-direction: column; gap: 10px; text-align: start; }
+.pf-meta li { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-secondary); overflow-wrap: anywhere; }
+.pf-meta li svg { color: var(--color-primary); flex-shrink: 0; }
+.pf-meta a { color: var(--text-primary); font-weight: 600; text-decoration: none; }
+.pf-meta a:hover { color: var(--color-primary); }
+
+/* بطاقات إحصائيات في العمود الرئيسي */
+.pf-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; }
+.pf-kpi { padding: 18px; display: flex; align-items: center; gap: 14px; }
+.pf-kpi__ico { width: 42px; height: 42px; border-radius: 12px; background: var(--pf-tint); color: var(--color-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.pf-kpi strong { display: block; font-size: 22px; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.pf-kpi span { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+
+/* كروت الأقسام */
+.pf-dept { display: flex; flex-direction: column; gap: 8px; padding: 18px; background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--pf-radius); transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
+.pf-dept:hover { transform: translateY(-3px); box-shadow: var(--pf-shadow-hover); border-color: rgba(var(--color-primary-rgb), .45); }
+.pf-dept__ico { width: 38px; height: 38px; border-radius: 11px; background: var(--pf-tint); color: var(--color-primary); display: flex; align-items: center; justify-content: center; }
+.pf-dept h3 { margin: 4px 0 0; font-size: 15.5px; font-weight: 800; letter-spacing: -.01em; line-height: 1.35; }
+.pf-dept p { margin: 0; font-size: 13px; line-height: 1.6; color: var(--text-secondary); display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
