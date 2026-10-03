@@ -46,7 +46,20 @@ const STATUS_META = {
 
 function toLocalInput(iso) {
   if (!iso) return '';
-  return String(iso).slice(0, 16);
+  // API values are UTC — show them in the browser's local time.
+  let s = String(iso).trim().replace(' ', 'T');
+  if (/T\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/.test(s)) s += 'Z';
+  const d = new Date(s);
+  if (Number.isNaN(d.getTime())) return '';
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+// Local "YYYY-MM-DDTHH:mm" from the form → UTC instant for the API.
+function toUtcIso(local) {
+  if (!local) return null;
+  const d = new Date(local);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
 }
 
 // YYYY-MM-DDTHH:mm in the browser's LOCAL time (matches what a
@@ -411,8 +424,8 @@ export default function AcademicStaffExamBuilder() {
         duration_minutes: Number(form.duration_minutes) || 1,
         max_attempts: Number(form.max_attempts) || 1,
         passing_score: form.passing_score === '' ? null : Number(form.passing_score),
-        start_at: form.start_at || null,
-        end_at: form.end_at || null,
+        start_at: toUtcIso(form.start_at),
+        end_at: toUtcIso(form.end_at),
       };
       const json = await api.patch(`/api/v1/exam-system/exams/${id}`, payload);
       setExam((prev) => ({ ...prev, ...json.data }));

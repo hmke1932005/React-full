@@ -34,9 +34,16 @@ export const questionTypeLabel = (type, ar, short = false) => {
 };
 
 /* ---- Dates ------------------------------------------------------------------------- */
+/**
+ * The API stores and returns UTC. Values normally arrive as ISO with "Z"; a naive
+ * "YYYY-MM-DD HH:MM:SS" (raw DB value) is UTC too, so tag it explicitly — otherwise the
+ * browser would read it as local time and every exam time would shift by the UTC offset.
+ */
 const parse = (iso) => {
   if (!iso) return null;
-  const d = new Date(String(iso).replace(' ', 'T'));
+  let s = String(iso).trim().replace(' ', 'T');
+  if (/T\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/.test(s)) s += 'Z';
+  const d = new Date(s);
   return Number.isNaN(d.getTime()) ? null : d;
 };
 const loc = (ar) => (ar ? 'ar-EG' : 'en-US');
@@ -72,8 +79,16 @@ export const timeInput = (iso) => {
   const p = (n) => String(n).padStart(2, '0');
   return `${p(d.getHours())}:${p(d.getMinutes())}`;
 };
-/** Combine the two inputs into the "YYYY-MM-DDTHH:MM" the API accepts ('' → null). */
-export const combineDateTime = (date, time) => (date ? `${date}T${time || '00:00'}` : null);
+/**
+ * Combine the date + time inputs (the user's LOCAL wall-clock time) into a UTC instant
+ * ("2026-09-15T06:00:00.000Z") so the server stores the exact moment the doctor meant,
+ * whatever timezone the server runs in. '' → null.
+ */
+export const combineDateTime = (date, time) => {
+  if (!date) return null;
+  const d = new Date(`${date}T${time || '00:00'}`);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+};
 
 /* ---- Exam phase (what the design calls Draft / Scheduled / Live / Completed) ------------ */
 export const PHASES = {
