@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api, errorMessage } from '../../api/client';
 import Icon from '../../components/Icon';
+import { CredentialsModal, PasswordInput, generatePassword } from '../../components/people/credentials';
 import { useTranslations, useLanguage } from '../../context/LanguageContext';
 import i18nCommon from '../../i18n/common';
 import i18nPage from '../../i18n/university/faculty-portfolio';
@@ -371,6 +372,8 @@ function FacultyLoginCard({ facultyId, hasLogin, loginEmail, onChanged }) {
   const t = useTranslations(translations);
   const { locale } = useLanguage();
   const [email, setEmail] = useState('');
+  const [provPassword, setProvPassword] = useState('');
+  const [created, setCreated] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [ok, setOk] = useState(null);
@@ -389,8 +392,10 @@ function FacultyLoginCard({ facultyId, hasLogin, loginEmail, onChanged }) {
     setSaving(true);
     setError(null);
     try {
-      await api.post(`/api/v1/faculty/${facultyId}/login`, { email });
-      onChanged();
+      // Always send a known password so the admin can hand it over (email delivery isn't guaranteed).
+      const password = provPassword.trim() || generatePassword();
+      await api.post(`/api/v1/faculty/${facultyId}/login`, { email, password, locale });
+      setCreated({ email, password });
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -448,6 +453,15 @@ function FacultyLoginCard({ facultyId, hasLogin, loginEmail, onChanged }) {
 
   return (
     <div className="card glass-panel">
+      {created && (
+        <CredentialsModal
+          title={locale === 'ar' ? 'تم إنشاء حساب الكلية' : 'Faculty login created'}
+          email={created.email}
+          password={created.password}
+          message={locale === 'ar' ? 'سلّم بيانات الدخول لمسؤول الكلية.' : 'Hand these login details to the faculty administrator.'}
+          onClose={() => { setCreated(null); onChanged(); }}
+        />
+      )}
       <h2 className="text-h3" style={{ marginBottom: 'var(--space-3)' }}>{t('Faculty Login')}</h2>
       {error && <p className="form-error">{error}</p>}
       {ok && <p className="text-small" style={{ color: 'var(--color-success, green)' }}>{ok}</p>}
@@ -508,8 +522,13 @@ function FacultyLoginCard({ facultyId, hasLogin, loginEmail, onChanged }) {
               ? 'أنشئ حساب دخول مستقل للكلية — هيقدر يدخل لوحة تحكم خاصة بيه (طلابه، اعتماد مشاريعه) بمعزل عن باقي الجامعة.'
               : "Create a standalone login for this faculty — it'll get its own dashboard (its students, its project approvals) separate from the rest of the university."}
           </p>
-          <form onSubmit={handleProvision} style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
-            <input className="form-input" type="email" required maxLength={190} placeholder={t('Faculty email')} value={email} onChange={(e) => setEmail(e.target.value)} style={{ flex: 1, minWidth: 160 }} />
+          <form onSubmit={handleProvision}>
+            <div className="form-group">
+              <label className="form-label">{t('Faculty email')}</label>
+              <input className="form-input" type="email" required maxLength={190} value={email} onChange={(e) => setEmail(e.target.value)} />
+            </div>
+            <PasswordInput value={provPassword} onChange={setProvPassword} />
+            <p className="text-caption">{locale === 'ar' ? 'يجب أن تحتوي على حرف كبير وصغير ورقم ورمز خاص.' : 'Must include upper and lower case letters, a number and a special character.'}</p>
             <button type="submit" className="btn btn-primary btn-sm" disabled={saving}><Icon name="plus" size={14} /> {t('Create Login')}</button>
           </form>
         </>

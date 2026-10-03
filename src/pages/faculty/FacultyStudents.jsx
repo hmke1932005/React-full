@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, errorMessage } from '../../api/client';
 import Icon from '../../components/Icon';
+import { CredentialsModal, ImportResult, PasswordInput, SetPasswordModal, downloadTemplate } from '../../components/people/credentials';
 import { useTranslations, useLanguage } from '../../context/LanguageContext';
 import i18nCommon from '../../i18n/common';
 import i18nPage from '../../i18n/faculty/students';
@@ -81,6 +82,8 @@ export default function FacultyStudents() {
   const [groups, setGroups] = useState([]);
   const [creatingGroup, setCreatingGroup] = useState(false);
   const [groupError, setGroupError] = useState(null);
+  const [passwordFor, setPasswordFor] = useState(null);
+  const [importEmail, setImportEmail] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState(null);
   const [importError, setImportError] = useState(null);
@@ -132,6 +135,7 @@ export default function FacultyStudents() {
     try {
       const fd = new FormData();
       fd.append('csv_file', file);
+      if (importEmail) fd.append('send_email', '1');
       const json = await api.postForm('/api/v1/bulk/students/import', fd);
       setImportResult(json.data);
       load();
@@ -192,6 +196,9 @@ export default function FacultyStudents() {
           <p className="text-small">{total} {locale === 'ar' ? 'طالب' : 'students'}</p>
         </div>
         <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+          <button type="button" className="btn btn-outline" onClick={() => document.getElementById('students-import')?.scrollIntoView({ behavior: 'smooth' })}>
+            <Icon name="upload" size={16} /> {locale === 'ar' ? 'استيراد' : 'Import'}
+          </button>
           <button type="button" className="btn btn-primary" onClick={() => setInviting(true)}>
             <Icon name="plus" size={16} /> {t('Add Student')}
           </button>
@@ -268,6 +275,7 @@ export default function FacultyStudents() {
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
                         <Link to={`/faculty/graduation/${s.id}/review`} className="btn btn-outline btn-sm" title={t('Graduation Review')}><Icon name="award" size={14} /></Link>
                         <button type="button" className="btn btn-outline btn-sm" title={t('Edit')} onClick={() => setEditing(s)}><Icon name="edit" size={14} /></button>
+                        <button type="button" className="btn btn-outline btn-sm" title={locale === 'ar' ? 'كلمة السر' : 'Password'} onClick={() => setPasswordFor(s)}><Icon name="key" size={14} /></button>
                         {inviteMeta && s.invitation_status !== 'accepted' && (
                           <button type="button" className="btn btn-outline btn-sm" disabled={busy} title={t('Resend')} onClick={() => handleResend(s)}><Icon name="mail" size={14} /></button>
                         )}
@@ -298,33 +306,29 @@ export default function FacultyStudents() {
         </div>
       )}
 
-      <div className="card glass-panel" style={{ marginTop: 'var(--space-6)' }}>
+      <div id="students-import" className="card glass-panel" style={{ marginTop: 'var(--space-6)' }}>
         <h2 className="text-h4" style={{ marginBottom: 'var(--space-2)' }}>{t('Import from CSV')}</h2>
         <p className="text-caption" style={{ marginBottom: 'var(--space-3)' }}>
           {locale === 'ar'
-            ? 'ترتيب الأعمدة: full_name, email, student_number, faculty, department, academic_year, current_semester, group — كل الطلاب سيُضافون مباشرةً إلى كليتك بغض النظر عن عمود faculty، والقسم لازم يطابق اسم قسم موجود فعلًا في كليتك (عربي أو إنجليزي)، وإلا سيتم تخطي السطر. عمود group يُتجاهل هنا (المجموعات ميزة جامعة).'
-            : 'Column order: full_name, email, student_number, faculty, department, academic_year, current_semester, group — every student is added directly to your faculty regardless of the faculty column, and department must match a department that already exists in your faculty (Arabic or English), or the row is skipped. The group column is ignored here (groups are a University-portal feature).'}
+            ? 'ترتيب الأعمدة: full_name, email, student_number, faculty, department, academic_year, current_semester, group — كل الطلاب سيُضافون مباشرةً إلى كليتك بغض النظر عن عمود faculty، والقسم لازم يطابق اسم قسم موجود فعلًا في كليتك (عربي أو إنجليزي)، وإلا سيتم تخطي السطر. عمود group (اسم مجموعة موجودة) و password (اختياري) مدعومان.'
+            : 'Column order: full_name, email, student_number, faculty, department, academic_year, current_semester, group — every student is added directly to your faculty regardless of the faculty column, and department must match a department that already exists in your faculty (Arabic or English), or the row is skipped. The group (an existing group name) and password (optional) columns are supported.'}
         </p>
         <form onSubmit={(e) => { e.preventDefault(); const file = e.target.elements.csv_file.files[0]; handleImport(file); e.target.reset(); }}
           style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center', flexWrap: 'wrap' }}>
-          <input type="file" name="csv_file" accept=".csv,text/csv" required />
+          <input type="file" name="csv_file" accept=".csv,.xlsx,text/csv" required />
           <button type="submit" className="btn btn-outline btn-sm" disabled={importing}>
             <Icon name="upload" size={14} /> {importing ? (locale === 'ar' ? 'جارٍ الاستيراد…' : 'Importing…') : t('Import')}
           </button>
+          <button type="button" className="btn btn-outline btn-sm" onClick={() => downloadTemplate('students-template.csv', ['full_name', 'email', 'student_number', 'faculty', 'department', 'academic_year', 'current_semester', 'group', 'password'], ['Sara Ahmed', 'sara@example.com', '2024001', '', '', '1', '1', '', ''])}>
+            <Icon name="download" size={14} /> {locale === 'ar' ? 'تنزيل نموذج الملف' : 'Download template'}
+          </button>
+          <label className="text-small" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <input type="checkbox" checked={importEmail} onChange={(e) => setImportEmail(e.target.checked)} />
+            {locale === 'ar' ? 'إرسال بيانات الدخول بالبريد' : 'Email login details'}
+          </label>
         </form>
         {importError && <p className="form-error" style={{ marginTop: 'var(--space-3)' }}>{importError}</p>}
-        {importResult && (
-          <p className="text-small" style={{ marginTop: 'var(--space-3)' }}>
-            {locale === 'ar'
-              ? `تم استيراد ${importResult.imported}، وتخطي ${importResult.skipped}.`
-              : `Imported ${importResult.imported}, skipped ${importResult.skipped}.`}
-            {importResult.errors?.length > 0 && (
-              <span style={{ display: 'block', color: 'var(--color-danger)', marginTop: 'var(--space-1)' }}>
-                {importResult.errors.slice(0, 5).join(' ')}
-              </span>
-            )}
-          </p>
-        )}
+        {importResult && <ImportResult result={importResult} />}
       </div>
 
       <div className="card glass-panel" style={{ marginTop: 'var(--space-5)' }}>
@@ -382,6 +386,14 @@ export default function FacultyStudents() {
         />
       )}
 
+      {passwordFor && (
+        <SetPasswordModal
+          title={`${locale === 'ar' ? 'كلمة السر: ' : 'Password: '}${passwordFor.full_name}`}
+          endpoint={`/api/v1/students/${passwordFor.id}/password`}
+          onClose={() => setPasswordFor(null)}
+        />
+      )}
+
       {creatingGroup && (
         <CreateGroupModal
           onClose={() => setCreatingGroup(false)}
@@ -404,6 +416,9 @@ function InviteStudentModal({ departments, programs, groups, onClose, onDone }) 
   const [programId, setProgramId] = useState('');
   const [groupId, setGroupId] = useState('');
   const [studyStartDate, setStudyStartDate] = useState('');
+  const [password, setPassword] = useState('');
+  const [sendEmail, setSendEmail] = useState(true);
+  const [created, setCreated] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
@@ -414,7 +429,7 @@ function InviteStudentModal({ departments, programs, groups, onClose, onDone }) 
     setSaving(true);
     setError(null);
     try {
-      await api.post('/api/v1/students', {
+      const json = await api.post('/api/v1/students', {
         full_name: fullName,
         email,
         student_number: studentNumber || null,
@@ -424,12 +439,27 @@ function InviteStudentModal({ departments, programs, groups, onClose, onDone }) 
         program_id: programId || null,
         group_id: groupId || null,
         study_start_date: studyStartDate || null,
+        password: password.trim() || null,
+        send_email: sendEmail,
+        locale,
       });
-      onDone(null);
+      setCreated({ ...json.data, message: json.message });
     } catch (err) {
       setError(errorMessage(err));
       setSaving(false);
     }
+  }
+
+  if (created) {
+    return (
+      <CredentialsModal
+        title={locale === 'ar' ? 'تمت إضافة الطالب' : 'Student added'}
+        email={email}
+        password={created.password}
+        message={created.message}
+        onClose={() => onDone(null)}
+      />
+    );
   }
 
   return (
@@ -484,6 +514,11 @@ function InviteStudentModal({ departments, programs, groups, onClose, onDone }) 
               </select>
             </div>
           </div>
+          <PasswordInput value={password} onChange={setPassword} />
+          <label className="text-small" style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 'var(--space-2)' }}>
+            <input type="checkbox" checked={sendEmail} onChange={(e) => setSendEmail(e.target.checked)} />
+            {locale === 'ar' ? 'إرسال بيانات الدخول إلى بريد الطالب' : "Email the login details to the student"}
+          </label>
           {error && <p className="form-error">{error}</p>}
           <div className="modal-box__actions">
             <button type="button" className="btn btn-outline" onClick={onClose}>{locale === 'ar' ? 'إلغاء' : 'Cancel'}</button>

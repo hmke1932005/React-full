@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, errorMessage } from '../../api/client';
 import Icon from '../../components/Icon';
+import { CredentialsModal, PasswordInput, generatePassword } from '../../components/people/credentials';
 import { useTranslations, useLanguage } from '../../context/LanguageContext';
 import i18nCommon from '../../i18n/common';
 import i18nPage from '../../i18n/university/faculties';
@@ -26,6 +27,7 @@ export default function UniversityFaculties() {
   const [showArchived, setShowArchived] = useState(false);
   const [actionError, setActionError] = useState(null);
   const [busyId, setBusyId] = useState(null);
+  const [addingDeptFor, setAddingDeptFor] = useState(null);
 
   const load = useCallback((archived) => {
     setLoading(true);
@@ -78,6 +80,9 @@ export default function UniversityFaculties() {
             {t("Your university's faculties — open one to see its stats and departments, and manage its portfolio visibility.")}
           </p>
         </div>
+        <button type="button" className="btn btn-primary" onClick={() => document.getElementById('add-faculty')?.scrollIntoView({ behavior: 'smooth' })}>
+          <Icon name="plus" size={16} /> {t('Add Faculty')}
+        </button>
       </div>
 
       <div className="grid-2" style={{ marginBottom: 'var(--space-6)' }}>
@@ -150,7 +155,12 @@ export default function UniversityFaculties() {
                         : <span className="badge badge-neutral"><Icon name="eye-off" size={12} /> {t('Private')}</span>}
                     </td>
                     <td style={{ display: 'flex', gap: 'var(--space-2)' }}>
-                      <Link to={`/university/faculties/${f.id}/portfolio`} className="btn btn-outline btn-sm">{t('View Portfolio')}</Link>
+                      <Link to={`/university/faculties/${f.id}/portfolio`} className="btn btn-outline btn-sm">{locale === 'ar' ? 'إدارة الكلية' : 'Manage'}</Link>
+                      {!showArchived && (
+                        <button type="button" className="btn btn-outline btn-sm" onClick={() => setAddingDeptFor(f)}>
+                          <Icon name="plus" size={14} /> {locale === 'ar' ? 'قسم' : 'Department'}
+                        </button>
+                      )}
                       {showArchived ? (
                         <button
                           type="button"
@@ -179,7 +189,15 @@ export default function UniversityFaculties() {
         </div>
       )}
 
-      <div className="card glass-panel" style={{ padding: 'var(--space-6)', maxWidth: 640 }}>
+      {addingDeptFor && (
+        <AddDepartmentModal
+          faculty={addingDeptFor}
+          onClose={() => setAddingDeptFor(null)}
+          onDone={() => { setAddingDeptFor(null); load(showArchived); }}
+        />
+      )}
+
+      <div id="add-faculty" className="card glass-panel" style={{ padding: 'var(--space-6)', maxWidth: 640 }}>
         <h2 className="text-h3" style={{ marginBottom: 'var(--space-4)' }}>{t('Add Faculty')}</h2>
         <AddFacultyForm onDone={() => load(showArchived)} />
       </div>
@@ -195,6 +213,7 @@ function AddFacultyForm({ onDone }) {
   const [description, setDescription] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [created, setCreated] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
@@ -203,14 +222,17 @@ function AddFacultyForm({ onDone }) {
     setSaving(true);
     setError(null);
     try {
+      // With a login email, always send a known password so it can be handed over.
+      const finalPassword = email.trim() ? (password || generatePassword()) : undefined;
       await api.post('/api/v1/faculty', {
         name_en: nameEn,
         name_ar: nameAr,
         description,
         email: email.trim() || undefined,
-        password: password || undefined,
+        password: finalPassword,
         locale,
       });
+      if (finalPassword) setCreated({ email: email.trim(), password: finalPassword });
       setNameEn(''); setNameAr(''); setDescription(''); setEmail(''); setPassword('');
       onDone();
     } catch (err) {
@@ -222,6 +244,15 @@ function AddFacultyForm({ onDone }) {
 
   return (
     <form onSubmit={handleSubmit}>
+      {created && (
+        <CredentialsModal
+          title={locale === 'ar' ? 'تم إنشاء الكلية وحساب الدخول' : 'Faculty and login created'}
+          email={created.email}
+          password={created.password}
+          message={locale === 'ar' ? 'سلّم بيانات الدخول لمسؤول الكلية.' : 'Hand these login details to the faculty administrator.'}
+          onClose={() => setCreated(null)}
+        />
+      )}
       <div className="grid-2">
         <div className="form-group">
           <label className="form-label">{t('Faculty Name (English)')}</label>
@@ -250,18 +281,7 @@ function AddFacultyForm({ onDone }) {
           <label className="form-label">{t('Email')}</label>
           <input type="email" className="form-input" value={email} onChange={(e) => setEmail(e.target.value)} maxLength={190} />
         </div>
-        <div className="form-group">
-          <label className="form-label">{t('Password')}</label>
-          <input
-            type="password"
-            className="form-input"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            maxLength={64}
-            autoComplete="new-password"
-            placeholder={locale === 'ar' ? 'يتولّد تلقائيًا لو فاضي' : 'Auto-generated if left empty'}
-          />
-        </div>
+        <PasswordInput value={password} onChange={setPassword} label={t('Password')} />
       </div>
 
       {error && <p className="form-error">{error}</p>}
@@ -269,5 +289,52 @@ function AddFacultyForm({ onDone }) {
         <Icon name="plus" size={18} /> {saving ? (locale === 'ar' ? 'جارٍ الإضافة…' : 'Adding…') : t('Add Faculty')}
       </button>
     </form>
+  );
+}
+
+function AddDepartmentModal({ faculty, onClose, onDone }) {
+  const { locale } = useLanguage();
+  const [nameEn, setNameEn] = useState('');
+  const [nameAr, setNameAr] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setSaving(true);
+    setError(null);
+    try {
+      await api.post(`/api/v1/faculty/${faculty.id}/departments`, { name_en: nameEn, name_ar: nameAr });
+      onDone();
+    } catch (err) {
+      setError(errorMessage(err));
+      setSaving(false);
+    }
+  }
+
+  const facultyName = locale === 'ar' ? (faculty.name_ar || faculty.name_en) : (faculty.name_en || faculty.name_ar);
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-box card glass-panel" onClick={(e) => e.stopPropagation()}>
+        <h2 className="modal-box__title text-h3">{locale === 'ar' ? `إضافة قسم — ${facultyName}` : `Add department — ${facultyName}`}</h2>
+        <form onSubmit={handleSubmit}>
+          <div className="grid-2">
+            <div className="form-group">
+              <label className="form-label">{locale === 'ar' ? 'اسم القسم (إنجليزي)' : 'Department name (English)'}</label>
+              <input className="form-input" value={nameEn} onChange={(e) => setNameEn(e.target.value)} required maxLength={200} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">{locale === 'ar' ? 'اسم القسم (عربي)' : 'Department name (Arabic)'}</label>
+              <input className="form-input" value={nameAr} onChange={(e) => setNameAr(e.target.value)} required maxLength={200} />
+            </div>
+          </div>
+          {error && <p className="form-error">{error}</p>}
+          <div className="modal-box__actions">
+            <button type="button" className="btn btn-outline" onClick={onClose}>{locale === 'ar' ? 'إلغاء' : 'Cancel'}</button>
+            <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? '…' : (locale === 'ar' ? 'إضافة' : 'Add')}</button>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 }

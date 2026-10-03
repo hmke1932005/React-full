@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api, errorMessage } from '../../api/client';
 import Icon from '../../components/Icon';
+import { CredentialsModal, PasswordInput, SetPasswordModal } from '../../components/people/credentials';
 import { useTranslations, useLanguage } from '../../context/LanguageContext';
 import i18nCommon from '../../i18n/common';
 import i18nPage from '../../i18n/university/supervisors';
@@ -55,6 +56,7 @@ export default function UniversitySupervisors() {
   const [busyId, setBusyId] = useState(null);
   const [inviting, setInviting] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [passwordFor, setPasswordFor] = useState(null);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -118,7 +120,7 @@ export default function UniversitySupervisors() {
           <p className="text-small">{t('Faculty members with a real login account, who can only manage the students and projects within their assigned scope.')}</p>
         </div>
         <button type="button" className="btn btn-primary" onClick={() => setInviting(true)}>
-          <Icon name="plus" size={16} /> {t('Invite Supervisor')}
+          <Icon name="plus" size={16} /> {locale === 'ar' ? 'إضافة مشرف' : 'Add Supervisor'}
         </button>
       </div>
 
@@ -169,6 +171,7 @@ export default function UniversitySupervisors() {
                     <td>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
                         <button type="button" className="btn btn-outline btn-sm" title={t('Edit permissions')} onClick={() => setEditing(s)}><Icon name="edit" size={14} /></button>
+                        <button type="button" className="btn btn-outline btn-sm" title={locale === 'ar' ? 'كلمة السر' : 'Password'} onClick={() => setPasswordFor(s)}><Icon name="key" size={14} /></button>
                         {s.effective_invitation_status && s.effective_invitation_status !== 'accepted' && (
                           <button type="button" className="btn btn-outline btn-sm" disabled={busy} title={t('Resend')} onClick={() => handleResend(s)}><Icon name="mail" size={14} /></button>
                         )}
@@ -189,6 +192,14 @@ export default function UniversitySupervisors() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {passwordFor && (
+        <SetPasswordModal
+          title={`${locale === 'ar' ? 'كلمة السر: ' : 'Password: '}${passwordFor.full_name}`}
+          endpoint={`/api/v1/supervisors/${passwordFor.id}/password`}
+          onClose={() => setPasswordFor(null)}
+        />
       )}
 
       {inviting && (
@@ -214,6 +225,8 @@ function InviteSupervisorModal({ onClose, onDone }) {
   const [department, setDepartment] = useState('');
   const [title, setTitle] = useState('');
   const [permissions, setPermissions] = useState([]);
+  const [password, setPassword] = useState('');
+  const [created, setCreated] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
@@ -226,12 +239,24 @@ function InviteSupervisorModal({ onClose, onDone }) {
     setSaving(true);
     setError(null);
     try {
-      await api.post('/api/v1/supervisors', { full_name: fullName, email, department, title, permissions });
-      onDone(null);
+      const json = await api.post('/api/v1/supervisors', { full_name: fullName, email, department, title, permissions, password: password.trim() || null, locale });
+      setCreated({ password: json.data?.password ?? '', message: json.message });
     } catch (err) {
       setError(errorMessage(err));
       setSaving(false);
     }
+  }
+
+  if (created) {
+    return (
+      <CredentialsModal
+        title={locale === 'ar' ? 'تمت إضافة المشرف' : 'Supervisor added'}
+        email={email}
+        password={created.password}
+        message={created.message}
+        onClose={() => onDone(null)}
+      />
+    );
   }
 
   return (
@@ -257,6 +282,7 @@ function InviteSupervisorModal({ onClose, onDone }) {
               <input className="form-input" placeholder={t('e.g. Assistant Professor')} value={title} onChange={(e) => setTitle(e.target.value)} />
             </div>
           </div>
+          <PasswordInput value={password} onChange={setPassword} />
           <div className="form-group">
             <label className="form-label">{t('Permissions')}</label>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-3)' }}>

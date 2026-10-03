@@ -188,7 +188,7 @@ export default function FacultyAcademicStaff() {
             <Icon name="upload" size={16} /> {t('Import')}
           </button>
           <button type="button" className="btn btn-primary" onClick={() => setInviting(true)}>
-            <Icon name="plus" size={16} /> {t('Invite Staff')}
+            <Icon name="plus" size={16} /> {locale === 'ar' ? 'إضافة دكتور / معيد' : 'Add Doctor / TA'}
           </button>
         </div>
       </div>
@@ -282,7 +282,7 @@ export default function FacultyAcademicStaff() {
  * لكل reveal)، وبيسمح كمان بتحديد كلمة مرور مخصصة بدل العشوائية
  * (PATCH .../password -> AcademicStaffManagementService::setPassword()).
  */
-function PasswordModal({ staff, onClose, onDone }) {
+export function PasswordModal({ staff, onClose, onDone }) {
   const t = useTranslations(translations);
   const { locale } = useLanguage();
   const [loading, setLoading] = useState(true);
@@ -384,13 +384,14 @@ function PasswordModal({ staff, onClose, onDone }) {
  * full_name, email, department (اسم أو id), rank (اسم أو id),
  * staff_number, bio, password (اختياري لكل صف).
  */
-function ImportStaffModal({ onClose, onDone }) {
+export function ImportStaffModal({ onClose, onDone, faculties = null }) {
   const t = useTranslations(translations);
   const { locale } = useLanguage();
   const [file, setFile] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [summary, setSummary] = useState(null);
+  const [facultyId, setFacultyId] = useState('');
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -400,6 +401,7 @@ function ImportStaffModal({ onClose, onDone }) {
     try {
       const formData = new FormData();
       formData.append('file', file);
+      if (facultyId) formData.append('faculty_id', facultyId);
       const json = await api.postForm('/api/v1/academic-staff/import', formData);
       setSummary(json.data);
     } catch (err) {
@@ -416,6 +418,15 @@ function ImportStaffModal({ onClose, onDone }) {
 
         {!summary ? (
           <form onSubmit={handleSubmit}>
+            {faculties && (
+              <div className="form-group">
+                <label className="form-label">{t('Faculty')}</label>
+                <select className="form-input" value={facultyId} onChange={(e) => setFacultyId(e.target.value)}>
+                  <option value="">{locale === 'ar' ? '— اختر الكلية (لقراءة أسماء الأقسام) —' : '— Select faculty (to resolve department names) —'}</option>
+                  {faculties.map((f) => <option key={f.id} value={f.id}>{locale === 'ar' ? f.name_ar : f.name_en}</option>)}
+                </select>
+              </div>
+            )}
             <div className="form-group">
               <label className="form-label">{t('CSV or Excel file')}</label>
               <input className="form-input" type="file" accept=".csv,.xlsx"

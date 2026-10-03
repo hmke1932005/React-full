@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api, errorMessage } from '../../api/client';
 import Icon from '../../components/Icon';
+import { CredentialsModal, PasswordInput } from '../../components/people/credentials';
+import { PasswordModal, ImportStaffModal } from '../faculty/FacultyAcademicStaff';
 import { useTranslations, useLanguage } from '../../context/LanguageContext';
 import i18nCommon from '../../i18n/common';
 import i18nPage from '../../i18n/university/academic-staff';
@@ -45,6 +47,8 @@ export default function UniversityAcademicStaff() {
   const [busyId, setBusyId] = useState(null);
   const [inviting, setInviting] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [passwordFor, setPasswordFor] = useState(null);
+  const [importing, setImporting] = useState(false);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -113,9 +117,14 @@ export default function UniversityAcademicStaff() {
           <h1 className="text-h1">{t('Academic Staff')}</h1>
           <p className="text-small">{total} {t('Academic Staff')}</p>
         </div>
-        <button type="button" className="btn btn-primary" onClick={() => setInviting(true)}>
-          <Icon name="plus" size={16} /> {t('Invite Staff')}
-        </button>
+        <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+          <button type="button" className="btn btn-outline" onClick={() => setImporting(true)}>
+            <Icon name="upload" size={16} /> {locale === 'ar' ? 'استيراد' : 'Import'}
+          </button>
+          <button type="button" className="btn btn-primary" onClick={() => setInviting(true)}>
+            <Icon name="plus" size={16} /> {locale === 'ar' ? 'إضافة دكتور / معيد' : 'Add Doctor / TA'}
+          </button>
+        </div>
       </div>
 
       {actionError && <p style={{ color: 'var(--color-danger)' }}>{actionError}</p>}
@@ -162,6 +171,7 @@ export default function UniversityAcademicStaff() {
                     <td>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
                         <button type="button" className="btn btn-outline btn-sm" title={t('Manage')} onClick={() => setEditing(s)}><Icon name="edit" size={14} /></button>
+                        <button type="button" className="btn btn-outline btn-sm" title={locale === 'ar' ? 'كلمة السر' : 'Password'} onClick={() => setPasswordFor(s)}><Icon name="key" size={14} /></button>
                         {s.effective_invitation_status && s.effective_invitation_status !== 'accepted' && (
                           <button type="button" className="btn btn-outline btn-sm" disabled={busy} title={t('Resend')} onClick={() => handleResend(s)}><Icon name="mail" size={14} /></button>
                         )}
@@ -186,6 +196,14 @@ export default function UniversityAcademicStaff() {
 
       {inviting && (
         <InviteStaffModal faculties={faculties} onClose={() => setInviting(false)} onDone={(err) => { setInviting(false); if (err) setActionError(err); else load(); }} />
+      )}
+
+      {passwordFor && (
+        <PasswordModal staff={passwordFor} onClose={() => setPasswordFor(null)} onDone={(err) => { setPasswordFor(null); if (err) setActionError(err); }} />
+      )}
+
+      {importing && (
+        <ImportStaffModal faculties={faculties} onClose={() => setImporting(false)} onDone={(err) => { setImporting(false); if (err) setActionError(err); else load(); }} />
       )}
 
       {editing && (
@@ -280,6 +298,8 @@ function InviteStaffModal({ faculties, onClose, onDone }) {
   const [rankId, setRankId] = useState('');
   const [staffNumber, setStaffNumber] = useState('');
   const [bio, setBio] = useState('');
+  const [password, setPassword] = useState('');
+  const [created, setCreated] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const departments = useDepartments(facultyId);
@@ -289,7 +309,7 @@ function InviteStaffModal({ faculties, onClose, onDone }) {
     setSaving(true);
     setError(null);
     try {
-      await api.post('/api/v1/academic-staff', {
+      const json = await api.post('/api/v1/academic-staff', {
         full_name: fullName,
         email,
         faculty_id: facultyId || null,
@@ -297,12 +317,25 @@ function InviteStaffModal({ faculties, onClose, onDone }) {
         academic_rank_id: rankId || null,
         staff_number: staffNumber || null,
         bio: bio || null,
+        password: password.trim() || null,
       });
-      onDone(null);
+      setCreated(json.data?.password ?? '');
     } catch (err) {
       setError(errorMessage(err));
       setSaving(false);
     }
+  }
+
+  if (created !== null) {
+    return (
+      <CredentialsModal
+        title={locale === 'ar' ? 'تمت الإضافة' : 'Staff member added'}
+        email={email}
+        password={created}
+        message={locale === 'ar' ? 'تم إنشاء الحساب. سلّم بيانات الدخول لصاحبها.' : 'The account was created. Hand the login details to the staff member.'}
+        onClose={() => onDone(null)}
+      />
+    );
   }
 
   return (
@@ -353,6 +386,7 @@ function InviteStaffModal({ faculties, onClose, onDone }) {
               <textarea className="form-input" rows={2} value={bio} onChange={(e) => setBio(e.target.value)} />
             </div>
           </div>
+          <PasswordInput value={password} onChange={setPassword} />
           {error && <p className="form-error">{error}</p>}
           <div className="modal-box__actions">
             <button type="button" className="btn btn-outline" onClick={onClose}>{locale === 'ar' ? 'إلغاء' : 'Cancel'}</button>
