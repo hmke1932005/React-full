@@ -143,7 +143,7 @@ function SmartDateTimeField({ label, value, onChange, presets }) {
  * flags as the actual design intent (Phase 6: "Do not overcomplicate the
  * UI unless necessary").
  */
-function ExamPoolModal({ examId, config, banks, onClose, onSaved }) {
+export function ExamPoolModal({ examId, config, banks, onClose, onSaved }) {
   const t = useTranslations(translations);
   const isNew = !config;
   const [bankId, setBankId] = useState('');

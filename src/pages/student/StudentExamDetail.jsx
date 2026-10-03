@@ -2,224 +2,146 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api, errorMessage } from '../../api/client';
 import Icon from '../../components/Icon';
-import { useTranslations } from '../../context/LanguageContext';
-import i18nCommon from '../../i18n/common';
-import i18nPage from '../../i18n/student/my-exams';
-
-const translations = { ...i18nCommon, ...i18nPage };
+import { useLanguage } from '../../context/LanguageContext';
+import { Skeleton } from '../../components/student/stUi';
+import {
+  AttemptPill, Note, PhasePill, examPhase, examTypeLabel, fmtDateTime, fmtNum,
+} from '../../components/exam/examUi';
 
 /**
- * Round 2 — GET /api/v1/exam-system/my-exams/{id} (StudentExamApiController::
- * show() -> StudentExamService::examSummaryForStudent()). Metadata only —
- * no question content (see StudentExamService's docblock: content is only
- * revealed once an attempt starts).
- *
- * Round 3 addition — GET/POST /api/v1/exam-system/my-exams/{id}/attempts
- * (ExamAttemptApiController::index/store -> ExamAttemptService). Lists the
- * student's own attempts and lets them start a new one (or resume an
- * `in_progress` one) or, for a finished attempt, jump straight to its
- * result. Question content itself only appears once inside
- * StudentExamAttempt, after an attempt exists — this page never fetches it.
+ * Student exam detail: GET my-exams/{id} (metadata only) + GET my-exams/{id}/attempts.
+ * Question content is never fetched here — it only exists once an attempt starts.
  */
 
-const ATTEMPT_STATUS_META = {
-  in_progress: { cls: 'badge-primary', key: 'In Progress' },
-  submitted: { cls: 'badge-success', key: 'Submitted' },
-  auto_submitted: { cls: 'badge-success', key: 'Auto-submitted' },
-  grading: { cls: 'badge-warning', key: 'Grading' },
-  graded: { cls: 'badge-success', key: 'Graded' },
-  expired: { cls: 'badge-neutral', key: 'Expired' },
-  cancelled: { cls: 'badge-neutral', key: 'Cancelled' },
-};
-
-const STATUS_META = {
-  scheduled: { cls: 'badge-primary', key: 'Scheduled' },
-  published: { cls: 'badge-success', key: 'Published' },
-};
-
-const RESULT_VISIBILITY_LABELS = {
-  immediate: 'Immediately after submission',
-  after_close: 'After the exam closes',
-  manual: 'Manual (your instructor publishes results)',
+const VISIBILITY = {
+  immediate: { en: 'Immediately after submission', ar: 'فور التسليم' },
+  after_close: { en: 'After the exam closes', ar: 'بعد إغلاق الامتحان' },
+  manual: { en: 'When your instructor publishes them', ar: 'عندما ينشرها أستاذك' },
 };
 
 export default function StudentExamDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const t = useTranslations(translations);
+  const { locale } = useLanguage();
+  const ar = locale === 'ar';
+
   const [exam, setExam] = useState(null);
   const [attempts, setAttempts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [starting, setStarting] = useState(false);
 
-  const loadAttempts = useCallback(() => {
-    return api.get(`/api/v1/exam-system/my-exams/${id}/attempts`)
-      .then((json) => setAttempts(json.data || []));
-  }, [id]);
+  const loadAttempts = useCallback(() => api.get(`/api/v1/exam-system/my-exams/${id}/attempts`).then((j) => setAttempts(j.data || [])), [id]);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     Promise.all([
-      api.get(`/api/v1/exam-system/my-exams/${id}`).then((json) => { if (!cancelled) setExam(json.data); }),
+      api.get(`/api/v1/exam-system/my-exams/${id}`).then((j) => { if (!cancelled) setExam(j.data); }),
       loadAttempts().catch(() => {}),
-    ])
-      .catch((err) => { if (!cancelled) setError(errorMessage(err)); })
+    ]).catch((err) => { if (!cancelled) setError(errorMessage(err)); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [id, loadAttempts]);
 
   const handleStart = () => {
-    if (!window.confirm(t('Start this exam now? The timer starts immediately and cannot be paused.'))) return;
+    if (!window.confirm(ar ? 'بدء الامتحان الآن؟ يبدأ العدّاد فورًا ولا يمكن إيقافه.' : 'Start this exam now? The timer starts immediately and cannot be paused.')) return;
     setStarting(true);
     api.post(`/api/v1/exam-system/my-exams/${id}/attempts`)
-      .then((json) => navigate(`/student/exam-attempt/${json.data.id}`))
+      .then((j) => navigate(`/student/exam-attempt/${j.data.id}`))
       .catch((err) => { setError(errorMessage(err)); setStarting(false); });
   };
 
-  if (loading) return <p className="text-small" style={{ padding: 'var(--space-5)' }}>{t('Loading…')}</p>;
-  if (error) return <p className="form-error" style={{ padding: 'var(--space-5)' }}>{error}</p>;
-  if (!exam) return null;
+  if (loading) return <div className="ex-page"><Skeleton h={100} count={3} /></div>;
+  if (!exam) return <div className="st-alert st-alert--danger"><Icon name="alert-triangle" size={16} /><span>{error || (ar ? 'الامتحان غير موجود.' : 'Exam not found.')}</span></div>;
 
+  const phase = examPhase(exam);
   const inProgress = attempts.find((a) => a.status === 'in_progress');
-  const attemptsUsed = attempts.length;
-  const maxedOut = exam.max_attempts != null && attemptsUsed >= exam.max_attempts && !inProgress;
+  const maxedOut = exam.max_attempts != null && attempts.length >= exam.max_attempts && !inProgress;
+  const notOpen = phase === 'scheduled';
+  const closed = phase === 'completed';
+  const canStart = !inProgress && !maxedOut && !notOpen && !closed;
 
-  const statusMeta = STATUS_META[exam.status] || STATUS_META.published;
+  const info = [
+    [ar ? 'المقرر' : 'Course', exam.subject || '—'],
+    [ar ? 'النوع' : 'Type', examTypeLabel(exam.exam_type, ar)],
+    [ar ? 'المدة' : 'Duration', `${exam.duration_minutes} ${ar ? 'دقيقة' : 'minutes'}`],
+    [ar ? 'عدد الأسئلة' : 'Questions', exam.question_count],
+    [ar ? 'الدرجة الكلية' : 'Total points', fmtNum(exam.total_marks)],
+    [ar ? 'درجة النجاح' : 'Passing score', exam.passing_score != null ? fmtNum(exam.passing_score) : (ar ? 'غير محددة' : 'Not set')],
+    [ar ? 'يفتح' : 'Opens', exam.start_at ? fmtDateTime(exam.start_at, ar) : (ar ? 'فورًا' : 'Immediately')],
+    [ar ? 'يغلق' : 'Closes', exam.end_at ? fmtDateTime(exam.end_at, ar) : (ar ? 'بلا موعد' : 'No end date')],
+    [ar ? 'المحاولات' : 'Attempts', `${attempts.length}/${exam.max_attempts ?? '∞'}`],
+  ];
+  const vis = VISIBILITY[exam.result_visibility];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
+    <div className="ex-page">
       <div>
-        <Link to="/student/my-exams" className="text-small" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-          <Icon name="chevron-left" size={14} /> {t('Back to My Exams')}
-        </Link>
+        <Link to="/student/my-exams" className="ex-back"><Icon name="chevron-left" size={14} className="icon-flip" /> {ar ? 'العودة إلى الامتحانات' : 'Back to Exams'}</Link>
+        <div className="ex-detail-head">
+          <div>
+            <div className="ex-detail-head__eyebrow"><PhasePill phase={phase} ar={ar} /></div>
+            <h1>{exam.title}</h1>
+            {exam.description && <p className="ex-detail-head__meta">{exam.description}</p>}
+          </div>
+          <div className="ex-detail-head__actions">
+            {inProgress ? (
+              <button type="button" className="btn btn-primary" onClick={() => navigate(`/student/exam-attempt/${inProgress.id}`)}>{ar ? 'متابعة المحاولة' : 'Resume Attempt'}</button>
+            ) : canStart ? (
+              <button type="button" className="btn btn-primary" disabled={starting} onClick={handleStart}>{starting ? '…' : (ar ? 'ابدأ الامتحان' : 'Start Exam')}</button>
+            ) : null}
+          </div>
+        </div>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
-        <div>
-          <h1 className="text-h2" style={{ margin: 0 }}>{exam.title}</h1>
-          {exam.subject && <p className="text-small" style={{ margin: 'var(--space-1) 0 0' }}>{exam.subject}</p>}
-        </div>
-        <span className={`badge ${statusMeta.cls}`}>{t(statusMeta.key)}</span>
+      {error && <div className="st-alert st-alert--danger"><Icon name="alert-triangle" size={16} /><span>{error}</span></div>}
+      {notOpen && <Note tone="warn" icon="clock">{ar ? 'هذا الامتحان لم يفتح بعد. ستتمكن من بدئه في الموعد المحدد.' : 'This exam has not opened yet. You will be able to start it at the scheduled time.'}</Note>}
+      {closed && attempts.length === 0 && <Note tone="bad" icon="alert-triangle">{ar ? 'أُغلق هذا الامتحان ولا توجد لديك محاولة.' : 'This exam is closed and you have no attempt.'}</Note>}
+      {maxedOut && <Note icon="info">{ar ? 'استنفدت الحد الأقصى من المحاولات.' : 'You have used the maximum number of attempts.'}</Note>}
+
+      <div className="ex-card">
+        <div className="ex-card__head"><div><h3 className="ex-card__title">{ar ? 'معلومات الامتحان' : 'Exam information'}</h3></div></div>
+        <dl className="ex-info-grid">
+          {info.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}
+        </dl>
       </div>
 
-      {exam.description && (
-        <div className="card glass-panel">
-          <p className="text-small" style={{ margin: 0 }}>{exam.description}</p>
+      <div className="ex-two-col">
+        <div className="ex-card">
+          <div className="ex-card__head"><div><h3 className="ex-card__title">{ar ? 'التعليمات' : 'Instructions'}</h3></div></div>
+          <div style={{ padding: '12px 20px 20px' }}>
+            <p style={{ margin: '0 0 12px', whiteSpace: 'pre-wrap', fontSize: 13.5, lineHeight: 1.6 }}>{exam.instructions || (ar ? 'لا توجد تعليمات إضافية.' : 'No additional instructions.')}</p>
+            <ul className="ex-check" style={{ color: 'var(--text-secondary)' }}>
+              <li style={{ color: 'inherit' }}><Icon name="clock" size={15} />{ar ? 'يبدأ العدّاد فور بدء المحاولة ولا يمكن إيقافه.' : 'The timer starts when you begin and cannot be paused.'}</li>
+              <li style={{ color: 'inherit' }}><Icon name="arrow-left" size={15} className="icon-flip" />{exam.allow_back_navigation ? (ar ? 'يمكنك الرجوع إلى الأسئلة السابقة.' : 'You can go back to previous questions.') : (ar ? 'لا يمكن الرجوع إلى سؤال سابق بعد تجاوزه.' : 'You cannot return to a question once you move on.')}</li>
+              <li style={{ color: 'inherit' }}><Icon name="check-circle" size={15} />{exam.auto_submit_on_timeout ? (ar ? 'يُسلَّم الامتحان تلقائيًا عند انتهاء الوقت.' : 'The exam is submitted automatically when time runs out.') : (ar ? 'سيُغلق الامتحان عند انتهاء الوقت.' : 'The exam closes when time runs out.')}</li>
+              {vis && <li style={{ color: 'inherit' }}><Icon name="eye" size={15} />{ar ? 'تظهر النتيجة: ' : 'Results appear: '}{ar ? vis.ar : vis.en}</li>}
+              {exam.secure_mode_enabled && <li style={{ color: 'inherit' }}><Icon name="shield" size={15} />{ar ? 'وضع آمن: يُراقَب ملء الشاشة وتبديل التبويبات.' : 'Secure mode: fullscreen and tab switching are monitored.'}</li>}
+            </ul>
+          </div>
         </div>
-      )}
 
-      <div className="card glass-panel">
-        <div className="grid-3">
-          <div>
-            <p className="text-caption" style={{ margin: 0 }}>{t('Duration')}</p>
-            <p className="text-small" style={{ margin: 0, fontWeight: 600 }}>{exam.duration_minutes} {t('minutes')}</p>
-          </div>
-          <div>
-            <p className="text-caption" style={{ margin: 0 }}>{t('Questions')}</p>
-            <p className="text-small" style={{ margin: 0, fontWeight: 600 }}>{exam.question_count}</p>
-          </div>
-          <div>
-            <p className="text-caption" style={{ margin: 0 }}>{t('Total Marks')}</p>
-            <p className="text-small" style={{ margin: 0, fontWeight: 600 }}>{exam.total_marks}</p>
-          </div>
-          <div>
-            <p className="text-caption" style={{ margin: 0 }}>{t('Starts')}</p>
-            <p className="text-small" style={{ margin: 0, fontWeight: 600 }}>{exam.start_at ? new Date(exam.start_at).toLocaleString() : t('Opens immediately')}</p>
-          </div>
-          <div>
-            <p className="text-caption" style={{ margin: 0 }}>{t('Ends')}</p>
-            <p className="text-small" style={{ margin: 0, fontWeight: 600 }}>{exam.end_at ? new Date(exam.end_at).toLocaleString() : t('No end date')}</p>
-          </div>
-          <div>
-            <p className="text-caption" style={{ margin: 0 }}>{t('Max Attempts')}</p>
-            <p className="text-small" style={{ margin: 0, fontWeight: 600 }}>{exam.max_attempts}</p>
-          </div>
-          <div>
-            <p className="text-caption" style={{ margin: 0 }}>{t('Passing Score')}</p>
-            <p className="text-small" style={{ margin: 0, fontWeight: 600 }}>{exam.passing_score ?? t('Not set')}</p>
-          </div>
-          <div>
-            <p className="text-caption" style={{ margin: 0 }}>{t('Result Visibility')}</p>
-            <p className="text-small" style={{ margin: 0, fontWeight: 600 }}>{t(RESULT_VISIBILITY_LABELS[exam.result_visibility] || exam.result_visibility)}</p>
-          </div>
-          {exam.secure_mode_enabled && (
-            <div>
-              <p className="text-caption" style={{ margin: 0 }}>{t('Secure Mode')}</p>
-              <p className="text-small" style={{ margin: 0, fontWeight: 600 }}>
-                <Icon name="shield" size={14} /> {t('Enabled')}
-              </p>
+        <div className="ex-card">
+          <div className="ex-card__head"><div><h3 className="ex-card__title">{ar ? 'محاولاتك' : 'Your attempts'}</h3></div></div>
+          {attempts.length === 0 ? (
+            <p className="ex-card__sub" style={{ padding: '12px 20px 20px' }}>{ar ? 'لا توجد محاولات بعد.' : 'No attempts yet.'}</p>
+          ) : (
+            <div style={{ padding: '8px 20px 16px' }}>
+              {attempts.map((a, idx) => (
+                <div key={a.id} className="ex-toggle" style={{ borderTop: idx ? '1px solid var(--border-subtle)' : 0 }}>
+                  <span>{ar ? 'المحاولة' : 'Attempt'} {attempts.length - idx}</span>
+                  <span className="ex-inline" style={{ gap: 10 }}>
+                    <AttemptPill status={a.status} ar={ar} />
+                    {a.status === 'in_progress'
+                      ? <Link className="ex-link" to={`/student/exam-attempt/${a.id}`}>{ar ? 'متابعة' : 'Resume'}</Link>
+                      : <Link className="ex-link" to={`/student/exam-attempt/${a.id}/result`}>{ar ? 'النتيجة' : 'Result'}</Link>}
+                  </span>
+                </div>
+              ))}
             </div>
           )}
         </div>
-      </div>
-
-      {exam.secure_mode_enabled && (
-        <div className="card glass-panel">
-          <p className="text-small" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-            <Icon name="shield" size={16} /> {t('This exam uses secure/proctored mode — fullscreen and tab-switching will be monitored.')}
-          </p>
-        </div>
-      )}
-
-      {exam.instructions && (
-        <div className="card glass-panel">
-          <h2 className="text-h3" style={{ marginTop: 0 }}>{t('Instructions')}</h2>
-          <p className="text-small" style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{exam.instructions}</p>
-        </div>
-      )}
-
-      <div className="card glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
-          <h2 className="text-h3" style={{ margin: 0 }}>{t('Your Attempts')}</h2>
-          {inProgress ? (
-            <button type="button" className="btn btn-primary" onClick={() => navigate(`/student/exam-attempt/${inProgress.id}`)}>
-              {t('Resume Attempt')}
-            </button>
-          ) : maxedOut ? null : (
-            <button type="button" className="btn btn-primary" disabled={starting} onClick={handleStart}>
-              {starting ? t('Saving…') : t('Start Exam')}
-            </button>
-          )}
-        </div>
-
-        {maxedOut && !inProgress && (
-          <p className="text-small" style={{ margin: 0 }}>{t('You have used the maximum number of attempts for this exam.')}</p>
-        )}
-
-        {attempts.length === 0 ? (
-          <p className="text-caption" style={{ margin: 0 }}>{t('No attempts yet.')}</p>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-            {attempts.map((a, idx) => {
-              const meta = ATTEMPT_STATUS_META[a.status] || ATTEMPT_STATUS_META.submitted;
-              const finished = !['in_progress'].includes(a.status);
-              return (
-                <div
-                  key={a.id}
-                  style={{
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                    gap: 'var(--space-2)', padding: 'var(--space-2) 0',
-                    borderTop: idx > 0 ? '1px solid var(--color-border, #e5e7eb)' : 'none',
-                  }}
-                >
-                  <span className="text-small">{t('Attempt')} {attempts.length - idx}</span>
-                  <span className={`badge ${meta.cls}`}>{t(meta.key)}</span>
-                  {finished && (
-                    <button
-                      type="button"
-                      className="btn btn-outline btn-sm"
-                      onClick={() => navigate(`/student/exam-attempt/${a.id}/result`)}
-                    >
-                      {t('View Result')}
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
       </div>
     </div>
   );

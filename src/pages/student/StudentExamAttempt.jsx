@@ -77,6 +77,7 @@ export default function StudentExamAttempt() {
   const navigate = useNavigate();
   const t = useTranslations(translations);
 
+  const [cur, setCur] = useState(0);
   const [attempt, setAttempt] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -317,126 +318,138 @@ export default function StudentExamAttempt() {
     );
   }
 
+  const allowBack = !!attempt.exam.allow_back_navigation;
+  const last = questions.length - 1;
+  const idx = Math.min(cur, Math.max(last, 0));
+  const q = questions[idx];
+  const state = q ? saveState[q.exam_question_id] : null;
+  const goTo = (n) => { if (n >= 0 && n <= last && (allowBack || n >= idx)) setCur(n); };
+  const arLocale = document.documentElement.dir === 'rtl';
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)', paddingBottom: 'var(--space-6)' }}>
-      {/* Sticky timer / progress bar */}
-      <div
-        className="card glass-panel"
-        style={{
-          position: 'sticky', top: 0, zIndex: 5,
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          flexWrap: 'wrap', gap: 'var(--space-3)',
-        }}
-      >
+    <div className="ex-page ex-page--narrow" style={{ paddingBottom: 'var(--space-6)' }}>
+      <div className="ex-card ex-attempt-bar">
         <div>
-          <h1 className="text-h3" style={{ margin: 0 }}>{attempt.exam.title}</h1>
-          <p className="text-caption" style={{ margin: 'var(--space-1) 0 0' }}>
-            {answeredCount} / {questions.length} {t('Answered').toLowerCase()}
-          </p>
+          <h1>{attempt.exam.title}</h1>
+          <p className="ex-card__sub">{answeredCount} / {questions.length} {t('Answered').toLowerCase()}</p>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
+        <div className="ex-attempt-bar__meta">
           {secureModeEnabled && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+            <span className="ex-inline" title={t('Violations')}>
               <Icon name={isFullscreen ? 'shield' : 'lock'} size={16} />
-              <div>
-                <p className="text-caption" style={{ margin: 0 }}>{t('Violations')}</p>
-                <p className="text-small" style={{ margin: 0, fontWeight: 600 }}>
-                  {attempt.violations_count ?? 0}{attempt.exam.max_violations != null ? ` / ${attempt.exam.max_violations}` : ''}
-                </p>
-              </div>
-            </div>
+              {attempt.violations_count ?? 0}{attempt.exam.max_violations != null ? ` / ${attempt.exam.max_violations}` : ''}
+            </span>
           )}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-            <Icon name="clock" size={18} />
-            <div>
-              <p className="text-caption" style={{ margin: 0 }}>{t('Time Remaining')}</p>
-              <p
-                className="text-h3"
-                style={{ margin: 0, fontVariantNumeric: 'tabular-nums', color: timeCritical ? 'var(--color-danger, #dc2626)' : undefined }}
-              >
-                {formatTime(secondsLeft)}
-              </p>
-            </div>
-          </div>
+          <span className={`ex-timer${timeCritical ? ' is-critical' : ''}`}>
+            <Icon name="clock" size={16} />{formatTime(secondsLeft)}
+          </span>
         </div>
       </div>
 
       {secureModeEnabled && !isFullscreen && (
-        <div className="card glass-panel" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+        <div className="ex-note ex-note--warn">
           <Icon name="lock" size={16} />
-          <p className="text-small" style={{ margin: 0 }}>{t('You have exited fullscreen — this has been recorded as a violation. Return to fullscreen to continue safely.')}</p>
-          <button type="button" className="btn btn-outline btn-sm" onClick={handleEnterSecureMode}>{t('Re-enter Fullscreen')}</button>
-        </div>
-      )}
-
-      {attempt.exam.instructions && (
-        <div className="card glass-panel">
-          <p className="text-small" style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{attempt.exam.instructions}</p>
-        </div>
-      )}
-
-      {/* Questions */}
-      {questions.map((q, idx) => {
-        const state = saveState[q.exam_question_id];
-        return (
-          <div key={q.exam_question_id} className="card glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 'var(--space-2)' }}>
-              <p className="text-caption" style={{ margin: 0 }}>
-                {t('Question')} {idx + 1} · {t(TYPE_LABELS[q.type] || q.type)} · {q.marks} {t('Marks')}
-              </p>
-              <span className={`badge ${isAnswered(q) ? 'badge-success' : 'badge-neutral'}`}>
-                {isAnswered(q) ? t('Answered') : t('Not answered')}
-              </span>
-            </div>
-
-            <p className="text-small" style={{ margin: 0, fontWeight: 600, whiteSpace: 'pre-wrap' }}>{q.prompt}</p>
-
-            {(q.type === 'mcq' || q.type === 'true_false' || q.type === 'multi_select') && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-                {(q.options || []).map((opt) => {
-                  const multi = q.type === 'multi_select';
-                  const checked = (q.my_answer?.selected_option_ids || []).includes(opt.id);
-                  return (
-                    <label key={opt.id} className="text-small" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', cursor: 'pointer' }}>
-                      <input
-                        type={multi ? 'checkbox' : 'radio'}
-                        name={`q-${q.exam_question_id}`}
-                        checked={checked}
-                        onChange={() => handleOptionChange(q, opt.id, multi)}
-                      />
-                      {q.type === 'true_false' ? t(opt.option_text) : opt.option_text}
-                    </label>
-                  );
-                })}
-              </div>
-            )}
-
-            {(q.type === 'short_answer' || q.type === 'essay') && (
-              <textarea
-                className="form-input"
-                rows={q.type === 'essay' ? 8 : 3}
-                placeholder={t('Write your answer here…')}
-                value={q.my_answer?.answer_text || ''}
-                onChange={(e) => handleTextChange(q, e.target.value)}
-              />
-            )}
-
-            {state && (
-              <p className="text-caption" style={{ margin: 0, color: state === 'error' ? 'var(--color-danger, #dc2626)' : undefined }}>
-                {state === 'saving' && t('Saving…')}
-                {state === 'saved' && t('Saved')}
-                {state === 'error' && t('Save failed — will retry')}
-              </p>
-            )}
+          <div>{t('You have exited fullscreen — this has been recorded as a violation. Return to fullscreen to continue safely.')}{' '}
+            <button type="button" className="ex-link" style={{ background: 'none', border: 0, cursor: 'pointer', padding: 0 }} onClick={handleEnterSecureMode}>{t('Re-enter Fullscreen')}</button>
           </div>
-        );
-      })}
+        </div>
+      )}
 
-      <div className="card glass-panel" style={{ display: 'flex', justifyContent: 'flex-end' }}>
-        <button type="button" className="btn btn-primary" disabled={submitting} onClick={handleSubmitClick}>
-          {submitting ? t('Saving…') : t('Submit Exam')}
-        </button>
+      {idx === 0 && attempt.exam.instructions && (
+        <div className="ex-note"><Icon name="info" size={16} /><div style={{ whiteSpace: 'pre-wrap' }}>{attempt.exam.instructions}</div></div>
+      )}
+
+      <div className="ex-palette" role="group" aria-label={t('Question')}>
+        {questions.map((x, n) => (
+          <button
+            key={x.exam_question_id}
+            type="button"
+            className={`ex-palette__dot${n === idx ? ' is-current' : ''}${isAnswered(x) ? ' is-answered' : ''}`}
+            disabled={!allowBack && n < idx}
+            onClick={() => goTo(n)}
+            aria-label={`${t('Question')} ${n + 1}`}
+            aria-current={n === idx ? 'step' : undefined}
+          >{n + 1}</button>
+        ))}
       </div>
+
+      {q && (
+        <div className="ex-card ex-card__pad">
+          <div className="ex-q__top" style={{ marginBottom: 6 }}>
+            <span className="ex-q__no">{t('Question')} {idx + 1} / {questions.length}</span>
+            <span>·</span>
+            <span>{t(TYPE_LABELS[q.type] || q.type)}</span>
+            <span>·</span>
+            <span>{q.marks} {t('Marks')}</span>
+            <span className="ex-q__tools">
+              <span className={`ex-status ${isAnswered(q) ? 'ex-status--graded' : 'ex-status--idle'}`}>{isAnswered(q) ? t('Answered') : t('Not answered')}</span>
+            </span>
+          </div>
+
+          <p className="ex-q__prompt" style={{ fontSize: 16 }}>{q.prompt}</p>
+
+          {(q.type === 'mcq' || q.type === 'true_false' || q.type === 'multi_select') && (
+            <div className="ex-opts">
+              {(q.options || []).map((opt) => {
+                const multi = q.type === 'multi_select';
+                const checked = (q.my_answer?.selected_option_ids || []).includes(opt.id);
+                return (
+                  <label key={opt.id} className={`ex-choice${checked ? ' is-selected' : ''}`}>
+                    <input
+                      type={multi ? 'checkbox' : 'radio'}
+                      name={`q-${q.exam_question_id}`}
+                      checked={checked}
+                      onChange={() => handleOptionChange(q, opt.id, multi)}
+                    />
+                    <span>{q.type === 'true_false' ? t(opt.option_text) : opt.option_text}</span>
+                  </label>
+                );
+              })}
+            </div>
+          )}
+
+          {(q.type === 'short_answer' || q.type === 'essay') && (
+            <textarea
+              className="ex-textarea"
+              rows={q.type === 'essay' ? 10 : 4}
+              placeholder={t('Write your answer here…')}
+              value={q.my_answer?.answer_text || ''}
+              onChange={(e) => handleTextChange(q, e.target.value)}
+            />
+          )}
+
+          <p className="ex-card__sub" style={{ marginTop: 10, minHeight: 18, color: state === 'error' ? 'var(--color-danger)' : undefined }}>
+            {state === 'saving' && t('Saving…')}
+            {state === 'saved' && t('Saved')}
+            {state === 'error' && t('Save failed — will retry')}
+          </p>
+
+          <div className="ex-footer">
+            {allowBack ? (
+              <button type="button" className="btn btn-outline" disabled={idx === 0} onClick={() => goTo(idx - 1)}>
+                <Icon name="arrow-left" size={14} className="icon-flip" /> {arLocale ? 'السابق' : 'Previous'}
+              </button>
+            ) : <span className="ex-card__sub">{arLocale ? 'لا يمكن الرجوع إلى الأسئلة السابقة.' : 'You cannot go back to previous questions.'}</span>}
+            <div className="ex-footer__right">
+              {idx < last ? (
+                <button type="button" className="btn btn-primary" onClick={() => goTo(idx + 1)}>
+                  {arLocale ? 'التالي' : 'Next'} <Icon name="arrow-right" size={14} className="icon-flip" />
+                </button>
+              ) : (
+                <button type="button" className="btn btn-primary" disabled={submitting} onClick={handleSubmitClick}>
+                  {submitting ? t('Saving…') : t('Submit Exam')}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {idx < last && (
+        <div style={{ textAlign: 'end' }}>
+          <button type="button" className="ex-link" style={{ background: 'none', border: 0, cursor: 'pointer' }} disabled={submitting} onClick={handleSubmitClick}>{t('Submit Exam')}</button>
+        </div>
+      )}
     </div>
   );
 }

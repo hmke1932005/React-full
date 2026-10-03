@@ -151,6 +151,8 @@ const AcademicStaffQuestionBanks = lazy(() => import('./pages/academic-staff/Aca
 const AcademicStaffQuestionBankDetail = lazy(() => import('./pages/academic-staff/AcademicStaffQuestionBankDetail'));
 const AcademicStaffExams = lazy(() => import('./pages/academic-staff/AcademicStaffExams'));
 const AcademicStaffExamBuilder = lazy(() => import('./pages/academic-staff/AcademicStaffExamBuilder'));
+const AcademicStaffExamWizard = lazy(() => import('./pages/academic-staff/AcademicStaffExamWizard'));
+const AcademicStaffExamDetail = lazy(() => import('./pages/academic-staff/AcademicStaffExamDetail'));
 const AcademicStaffExamTargets = lazy(() => import('./pages/academic-staff/AcademicStaffExamTargets'));
 const AcademicStaffExamAttempts = lazy(() => import('./pages/academic-staff/AcademicStaffExamAttempts'));
 const AcademicStaffExamAnalytics = lazy(() => import('./pages/academic-staff/AcademicStaffExamAnalytics'));
@@ -475,7 +477,11 @@ export default function App() {
                 <Route path="/academic-staff/question-banks" element={<AcademicStaffQuestionBanks />} />
                 <Route path="/academic-staff/question-banks/:id" element={<AcademicStaffQuestionBankDetail />} />
                 <Route path="/academic-staff/exams" element={<AcademicStaffExams />} />
-                <Route path="/academic-staff/exams/:id" element={<AcademicStaffExamBuilder />} />
+                <Route path="/academic-staff/exams/create" element={<AcademicStaffExamWizard />} />
+                <Route path="/academic-staff/exams/:id" element={<AcademicStaffExamDetail />} />
+                <Route path="/academic-staff/exams/:id/edit" element={<AcademicStaffExamWizard />} />
+                {/* Legacy builder kept reachable while the wizard replaces it. */}
+                <Route path="/academic-staff/exams/:id/builder" element={<AcademicStaffExamBuilder />} />
                 <Route path="/academic-staff/exams/:id/targets" element={<AcademicStaffExamTargets />} />
                 {/* Round 4 — attempts list w/ grading progress, and the
                     per-attempt manual grading + history screen. */}

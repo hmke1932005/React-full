@@ -2,23 +2,19 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api, errorMessage } from '../../api/client';
 import Icon from '../../components/Icon';
-import { useTranslations } from '../../context/LanguageContext';
-import i18nCommon from '../../i18n/common';
-import i18nPage from '../../i18n/student/my-exams';
-
-const translations = { ...i18nCommon, ...i18nPage };
+import { useLanguage } from '../../context/LanguageContext';
+import { Skeleton } from '../../components/student/stUi';
+import { ExKpi, Note, fmtNum, ringStyle } from '../../components/exam/examUi';
 
 /**
- * GET /api/v1/exam-system/attempts/{id}/result (ExamAttemptApiController::
- * result -> ExamAttemptService::studentResult() -> ExamGradingService::
- * studentResultView()). `visible=false` means the attempt is submitted but
- * result_visibility (immediate / after_close / manual) hasn't opened yet
- * for this student — shown as a plain "not available yet" state, not an
- * error, since that's expected and temporary.
+ * GET /api/v1/exam-system/attempts/{id}/result. `visible=false` → submitted but the
+ * exam's result_visibility hasn't opened yet (expected, not an error). `review_allowed`
+ * =false (score-only exams / answer review off) → the grade without the question breakdown.
  */
 export default function StudentExamResult() {
   const { id } = useParams();
-  const t = useTranslations(translations);
+  const { locale } = useLanguage();
+  const ar = locale === 'ar';
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -32,76 +28,82 @@ export default function StudentExamResult() {
     return () => { cancelled = true; };
   }, [id]);
 
-  if (loading) return <p className="text-small" style={{ padding: 'var(--space-5)' }}>{t('Loading…')}</p>;
-  if (error) return <p className="form-error" style={{ padding: 'var(--space-5)' }}>{error}</p>;
+  if (loading) return <div className="ex-page"><Skeleton h={100} count={3} /></div>;
+  if (error) return <div className="st-alert st-alert--danger"><Icon name="alert-triangle" size={16} /><span>{error}</span></div>;
   if (!result) return null;
 
+  const back = (
+    <Link to="/student/my-exams" className="ex-back"><Icon name="chevron-left" size={14} className="icon-flip" /> {ar ? 'العودة إلى الامتحانات' : 'Back to Exams'}</Link>
+  );
+
+  if (!result.visible) {
+    return (
+      <div className="ex-page ex-page--narrow">
+        {back}
+        <div className="ex-card ex-card__pad" style={{ textAlign: 'center' }}>
+          <Icon name="clock" size={32} />
+          <h2 style={{ margin: '12px 0 4px' }}>{ar ? 'نتيجتك غير متاحة بعد' : 'Your result is not available yet'}</h2>
+          <p className="ex-card__sub">{ar ? 'سينشر أستاذك النتائج وفق إعداد ظهور النتيجة لهذا الامتحان.' : "Your instructor will publish results according to this exam's result visibility setting."}</p>
+        </div>
+      </div>
+    );
+  }
+
+  const pct = result.percentage;
+  const passed = result.passing_score != null && result.score != null ? result.score >= result.passing_score : null;
+  const questions = result.questions || [];
+  const answerText = (q) => {
+    if (q.my_answer?.answer_text) return q.my_answer.answer_text;
+    if (q.my_answer?.selected_option_ids?.length) {
+      return (q.options || []).filter((o) => q.my_answer.selected_option_ids.includes(o.id)).map((o) => o.option_text).join(', ');
+    }
+    return ar ? 'لم تُرسل إجابة' : 'No answer submitted';
+  };
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)', maxWidth: 720, margin: '0 auto' }}>
+    <div className="ex-page ex-page--narrow">
       <div>
-        <Link to="/student/my-exams" className="text-small" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-          <Icon name="chevron-left" size={14} /> {t('Back to My Exams')}
-        </Link>
+        {back}
+        <div className="ex-detail-head"><div><h1>{ar ? 'نتيجتك' : 'Your Result'}</h1></div></div>
       </div>
 
-      <h1 className="text-h2" style={{ margin: 0 }}>{t('Your Result')}</h1>
-
-      {!result.visible ? (
-        <div className="card glass-panel empty-state">
-          <Icon name="clock" size={32} className="empty-state__icon" />
-          <p className="text-small" style={{ margin: 0, fontWeight: 600 }}>{t('Your result is not available yet.')}</p>
-          <p className="text-caption">{t('Your instructor will publish results according to this exam\'s result visibility setting.')}</p>
-        </div>
-      ) : (
-        <>
-          <div className="card glass-panel">
-            <div className="grid-2">
-              <div>
-                <p className="text-caption" style={{ margin: 0 }}>{t('Score')}</p>
-                <p className="text-h2" style={{ margin: 0 }}>{result.score ?? '—'}</p>
-              </div>
-              <div>
-                <p className="text-caption" style={{ margin: 0 }}>{t('Percentage')}</p>
-                <p className="text-h2" style={{ margin: 0 }}>{result.percentage != null ? `${result.percentage}%` : '—'}</p>
-              </div>
-            </div>
+      <div className="ex-card">
+        <div className="ex-donut">
+          <div className="ex-donut__ring" style={ringStyle([{ value: pct || 0, color: passed === false ? 'var(--color-danger)' : 'var(--color-success)' }, { value: 100 - (pct || 0), color: 'var(--bg-muted)' }])}>
+            <b>{pct != null ? `${fmtNum(pct)}%` : '—'}</b>
           </div>
+          <div className="ex-legend">
+            <span><b>{fmtNum(result.score)}</b>&nbsp;/ {fmtNum(result.total_marks)} {ar ? 'درجة' : 'points'}</span>
+            {passed != null && (
+              <span className={`ex-status ex-status--${passed ? 'graded' : 'failed'}`}>{passed ? (ar ? 'ناجح' : 'Passed') : (ar ? 'راسب' : 'Failed')}</span>
+            )}
+          </div>
+        </div>
+      </div>
 
-          {(result.questions || []).map((q, idx) => (
-            <div key={q.exam_question_id} className="card glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 'var(--space-2)' }}>
-                <p className="text-caption" style={{ margin: 0 }}>{t('Question')} {idx + 1}</p>
-                {q.is_correct === true && <span className="badge badge-success">{t('Correct')}</span>}
-                {q.is_correct === false && <span className="badge badge-danger">{t('Incorrect')}</span>}
-                {q.is_correct == null && <span className="badge badge-neutral">{t('Not graded yet')}</span>}
+      {result.status !== 'graded' && <Note tone="warn" icon="clock">{ar ? 'بعض الإجابات لم تُصحَّح بعد، وقد تتغير درجتك.' : 'Some answers are still being graded, so your score may change.'}</Note>}
+      {!result.review_allowed && <Note icon="info">{ar ? 'لا يعرض هذا الامتحان مراجعة الإجابات، تظهر الدرجة فقط.' : 'This exam does not show answer review — only your score.'}</Note>}
+
+      {questions.length > 0 && (
+        <div className="ex-qlist">
+          {questions.map((q, idx) => (
+            <div key={q.exam_question_id} className="ex-q">
+              <div className="ex-q__top">
+                <span className="ex-q__no">Q{idx + 1}</span>
+                <span>·</span>
+                <span>{fmtNum(q.marks_awarded)} / {fmtNum(q.max_marks)} {ar ? 'درجة' : 'pts'}</span>
+                <span className="ex-q__tools">
+                  {q.is_correct === true && <span className="ex-status ex-status--graded">{ar ? 'صحيحة' : 'Correct'}</span>}
+                  {q.is_correct === false && <span className="ex-status ex-status--failed">{ar ? 'خاطئة' : 'Incorrect'}</span>}
+                  {q.is_correct == null && <span className="ex-status ex-status--idle">{ar ? 'لم تُصحَّح' : 'Not graded'}</span>}
+                </span>
               </div>
-
-              <p className="text-small" style={{ margin: 0, fontWeight: 600, whiteSpace: 'pre-wrap' }}>{q.prompt}</p>
-
-              <p className="text-small" style={{ margin: 0 }}>
-                <span className="text-caption">{t('Your answer')}: </span>
-                {q.my_answer?.answer_text
-                  ? q.my_answer.answer_text
-                  : q.my_answer?.selected_option_ids?.length
-                    ? (q.options || [])
-                        .filter((o) => q.my_answer.selected_option_ids.includes(o.id))
-                        .map((o) => o.option_text)
-                        .join(', ')
-                    : t('No answer submitted')}
-              </p>
-
-              {q.feedback && (
-                <p className="text-caption" style={{ margin: 0 }}>
-                  <strong>{t('Feedback')}:</strong> {q.feedback}
-                </p>
-              )}
-
-              <p className="text-caption" style={{ margin: 0 }}>
-                {t('Marks')}: {q.marks_awarded ?? '—'} {t('out of')} {q.max_marks}
-              </p>
+              <p className="ex-q__prompt">{q.prompt}</p>
+              <div className="ex-ghost" style={{ borderStyle: 'solid' }}><strong>{ar ? 'إجابتك: ' : 'Your answer: '}</strong>{answerText(q)}</div>
+              {q.feedback && <p className="ex-card__sub" style={{ marginTop: 10 }}><strong>{ar ? 'ملاحظات: ' : 'Feedback: '}</strong>{q.feedback}</p>}
             </div>
           ))}
-        </>
+        </div>
       )}
     </div>
   );
